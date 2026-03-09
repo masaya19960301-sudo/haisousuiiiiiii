@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>満車管理アプリ</title>
+<style>
+/* ==================== リセット & 基本 ==================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: #f0f2f5;
+  color: #1a1a1a;
+  line-height: 1.5;
+}
+
+/* ==================== ヘッダー ==================== */
+.app-header {
+  background: linear-gradient(135deg, #1e3a5f, #2d5986);
+  color: #fff;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.app-header h1 { font-size: 1.2rem; font-weight: 600; }
+
+/* ==================== タブ ==================== */
+.tab-bar {
+  display: flex;
+  background: #fff;
+  border-bottom: 2px solid #e0e0e0;
+  padding: 0 16px;
+}
+.tab-btn {
+  padding: 12px 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  min-height: 44px;
+}
+.tab-btn:hover { color: #1e3a5f; background: #f5f8fc; }
+.tab-btn.active { color: #1e3a5f; border-bottom-color: #1e3a5f; font-weight: 600; }
+
+.tab-content { display: none; padding: 16px; }
+.tab-content.active { display: block; }
+
+/* ==================== 満車管理表 ==================== */
+.controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.controls-bar label { font-size: 0.85rem; color: #555; font-weight: 500; }
+.controls-bar input[type="date"] {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+.quick-btn {
+  padding: 6px 14px;
+  border: 1px solid #1e3a5f;
+  background: #fff;
+  color: #1e3a5f;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-height: 44px;
+  transition: all 0.2s;
+}
+.quick-btn:hover { background: #1e3a5f; color: #fff; }
+.add-row-btn {
+  padding: 6px 14px;
+  border: none;
+  background: #2d8a4e;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-height: 44px;
+  margin-left: auto;
+}
+.add-row-btn:hover { background: #236b3c; }
+
+/* ==================== テーブル ==================== */
+.table-wrapper {
+  overflow-x: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: 1100px;
+}
+.data-table th {
+  background: #2d5986;
+  color: #fff;
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.data-table td {
+  padding: 0;
+  border: 1px solid #e0e0e0;
+  text-align: right;
+  height: 40px;
+  min-height: 44px;
+  position: relative;
+}
+.data-table tr:hover { background: #f5f8fc; }
+.data-table tr.today-row { background: #e8f0fe !important; }
+.data-table tr.past-row { background: #f8f8f8; }
+.data-table tr.past-row:hover { background: #f0f0f0; }
+
+/* セル */
+.cell {
+  width: 100%;
+  height: 100%;
+  padding: 8px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  cursor: default;
+  outline: none;
+  min-height: 40px;
+  user-select: none;
+}
+.cell.text-left { justify-content: flex-start; }
+.cell.text-center { justify-content: center; }
+.cell.editable { cursor: cell; }
+.cell.focused {
+  outline: 2px solid #1a73e8;
+  outline-offset: -2px;
+  background: #e8f0fe;
+}
+.cell.editing {
+  padding: 0;
+}
+.cell.readonly {
+  background: #f5f5f5;
+  color: #666;
+}
+.cell.calc-col {
+  background: #fff8e1;
+  font-weight: 500;
+}
+.cell.saving { opacity: 0.6; }
+.cell.error {
+  outline: 2px solid #d32f2f !important;
+  outline-offset: -2px;
+}
+
+.cell-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 8px;
+  font-size: 0.85rem;
+  text-align: right;
+  background: #fff;
+  font-family: inherit;
+}
+.cell-input.text-left { text-align: left; }
+
+/* ステータスバッジ */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status-受付中 { background: #c8e6c9; color: #2e7d32; }
+.status-注意 { background: #fff9c4; color: #f57f17; }
+.status-満車 { background: #ffe0b2; color: #e65100; }
+.status-締切済 { background: #e0e0e0; color: #616161; }
+
+/* ステータスドロップダウン */
+.status-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 100;
+  overflow: hidden;
+}
+.status-dropdown .option {
+  padding: 10px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.status-dropdown .option:hover { background: #f0f0f0; }
+
+/* サマリー行 */
+.summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 16px;
+  background: #1e3a5f;
+  color: #fff;
+  border-radius: 0 0 8px 8px;
+  font-size: 0.85rem;
+}
+.summary-item { display: flex; gap: 6px; align-items: center; }
+.summary-item .label { opacity: 0.8; }
+.summary-item .value { font-weight: 600; font-size: 1rem; }
+
+/* ==================== 設定タブ ==================== */
+.settings-section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.settings-section h3 {
+  font-size: 1rem;
+  color: #1e3a5f;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e8f0fe;
+}
+.day-settings-table {
+  width: 100%;
+  border-collapse: collapse;
+  max-width: 500px;
+}
+.day-settings-table th, .day-settings-table td {
+  padding: 10px 12px;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+}
+.day-settings-table th { background: #f5f8fc; font-weight: 500; }
+.day-settings-table input[type="number"] {
+  width: 70px;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+.day-settings-table select {
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+.save-btn {
+  padding: 10px 24px;
+  background: #1e3a5f;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: 12px;
+  min-height: 44px;
+}
+.save-btn:hover { background: #2d5986; }
+
+/* 特別日設定 */
+.special-day-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+.special-day-form .field { display: flex; flex-direction: column; gap: 4px; }
+.special-day-form .field label { font-size: 0.8rem; color: #555; }
+.special-day-form .field input, .special-day-form .field select {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+.special-days-list {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+.special-days-list th, .special-days-list td {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+}
+.special-days-list th { background: #f5f8fc; font-weight: 500; }
+.delete-btn-small {
+  padding: 4px 10px;
+  background: #d32f2f;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  min-height: 36px;
+}
+
+/* ==================== データ確認タブ ==================== */
+.export-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.export-controls input[type="date"], .export-controls select {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+.export-btn {
+  padding: 8px 20px;
+  background: #2d8a4e;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+.readonly-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: 900px;
+}
+.readonly-table th {
+  background: #455a64;
+  color: #fff;
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+.readonly-table td {
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  text-align: right;
+}
+.readonly-table tr:nth-child(even) { background: #f9f9f9; }
+
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin-top: 16px;
+}
+.log-table th {
+  background: #607d8b;
+  color: #fff;
+  padding: 8px;
+  text-align: center;
+  font-weight: 500;
+}
+.log-table td { padding: 8px; border: 1px solid #e0e0e0; }
+
+/* ==================== トースト ==================== */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  padding: 12px 20px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  animation: slideIn 0.3s ease;
+  max-width: 360px;
+}
+.toast.success { background: #2e7d32; }
+.toast.error { background: #d32f2f; }
+.toast.info { background: #1565c0; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ==================== ダイアログ ==================== */
+.dialog-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.dialog {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 320px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.dialog h3 { margin-bottom: 12px; color: #1e3a5f; }
+.dialog p { margin-bottom: 16px; color: #555; }
+.dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.dialog-actions button {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+.dialog-actions .cancel { background: #e0e0e0; color: #333; }
+.dialog-actions .confirm { background: #d32f2f; color: #fff; }
+.dialog-actions .primary { background: #1e3a5f; color: #fff; }
+
+/* ==================== レスポンシブ ==================== */
+@media (max-width: 768px) {
+  html { font-size: 13px; }
+  .controls-bar { padding: 8px 12px; }
+  .tab-btn { padding: 10px 16px; font-size: 0.85rem; }
+  .summary-bar { gap: 10px; font-size: 0.8rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="app-header">
+  <h1>家具配送センター 満車管理</h1>
+  <span id="currentDateTime" style="font-size:0.8rem;opacity:0.8;"></span>
+</div>
+
+<!-- タブバー -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="main">満車管理表</button>
+  <button class="tab-btn" data-tab="settings">設定</button>
+  <button class="tab-btn" data-tab="data">データ確認</button>
+</div>
+
+<!-- ==================== タブ1: 満車管理表 ==================== -->
+<div id="tab-main" class="tab-content active">
+  <div class="controls-bar">
+    <label>開始日</label>
+    <input type="date" id="startDate">
+    <label>〜</label>
+    <input type="date" id="endDate">
+    <button class="quick-btn" onclick="setQuickRange('thisWeek')">今週</button>
+    <button class="quick-btn" onclick="setQuickRange('nextWeek')">来週</button>
+    <button class="quick-btn" onclick="setQuickRange('thisMonth')">今月</button>
+    <button class="quick-btn" onclick="loadData()">表示</button>
+    <button class="add-row-btn" onclick="showAddRowDialog()">＋ 配送日を追加</button>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="data-table" id="mainTable">
+      <thead>
+        <tr>
+          <th style="min-width:90px">配送日</th>
+          <th style="min-width:40px">曜日</th>
+          <th style="min-width:55px">台数</th>
+          <th style="min-width:75px">ステータス</th>
+          <th style="min-width:75px">昨日まで<br>件数</th>
+          <th style="min-width:90px">昨日まで<br>金額</th>
+          <th style="min-width:65px">当日<br>件数</th>
+          <th style="min-width:85px">当日<br>金額</th>
+          <th style="min-width:75px">合計<br>件数</th>
+          <th style="min-width:90px">合計<br>金額</th>
+          <th style="min-width:80px">1台あたり<br>件数</th>
+          <th style="min-width:90px">1台あたり<br>金額</th>
+          <th style="min-width:100px">備考</th>
+        </tr>
+      </thead>
+      <tbody id="mainTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="summary-bar" id="summaryBar">
+    <div class="summary-item"><span class="label">合計件数:</span><span class="value" id="sumTotalCount">-</span></div>
+    <div class="summary-item"><span class="label">合計金額:</span><span class="value" id="sumTotalAmount">-</span></div>
+    <div class="summary-item"><span class="label">平均台数:</span><span class="value" id="avgTrucks">-</span></div>
+    <div class="summary-item"><span class="label">平均1台件数:</span><span class="value" id="avgPerTruckCount">-</span></div>
+    <div class="summary-item"><span class="label">平均1台金額:</span><span class="value" id="avgPerTruckAmount">-</span></div>
+  </div>
+</div>
+
+<!-- ==================== タブ2: 設定 ==================== -->
+<div id="tab-settings" class="tab-content">
+  <!-- 曜日別台数設定 -->
+  <div class="settings-section">
+    <h3>曜日別台数設定</h3>
+    <table class="day-settings-table">
+      <thead><tr><th>曜日</th><th>通常台数</th><th>配送有無</th></tr></thead>
+      <tbody id="daySettingsBody"></tbody>
+    </table>
+    <button class="save-btn" onclick="saveDaySettingsUI()">保存</button>
+  </div>
+
+  <!-- 特別日設定 -->
+  <div class="settings-section">
+    <h3>特別日設定</h3>
+    <div class="special-day-form">
+      <div class="field">
+        <label>日付</label>
+        <input type="date" id="specialDate">
+      </div>
+      <div class="field">
+        <label>台数</label>
+        <input type="number" id="specialTrucks" value="0" min="0" style="width:70px">
+      </div>
+      <div class="field">
+        <label>種別</label>
+        <select id="specialType">
+          <option value="追加日">追加日</option>
+          <option value="休業日">休業日</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>メモ</label>
+        <input type="text" id="specialMemo" placeholder="メモ" style="width:160px">
+      </div>
+      <button class="save-btn" onclick="saveSpecialDayUI()" style="margin-top:0">追加</button>
+    </div>
+    <div class="table-wrapper">
+      <table class="special-days-list">
+        <thead><tr><th>日付</th><th>台数</th><th>種別</th><th>メモ</th><th>操作</th></tr></thead>
+        <tbody id="specialDaysBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== タブ3: データ確認 ==================== -->
+<div id="tab-data" class="tab-content">
+  <div class="settings-section">
+    <h3>過去データ閲覧・エクスポート</h3>
+    <div class="export-controls">
+      <label>開始日</label>
+      <input type="date" id="exportStartDate">
+      <label>〜</label>
+      <input type="date" id="exportEndDate">
+      <button class="quick-btn" onclick="loadExportData()">表示</button>
+      <button class="export-btn" onclick="doExportCSV()">CSVエクスポート</button>
+    </div>
+    <div class="table-wrapper">
+      <table class="readonly-table">
+        <thead>
+          <tr>
+            <th>配送日</th><th>曜日</th><th>台数</th><th>ステータス</th>
+            <th>合計件数</th><th>合計金額</th>
+            <th>1台件数</th><th>1台金額</th>
+            <th>昨日件数</th><th>昨日金額</th>
+            <th>当日件数</th><th>当日金額</th><th>備考</th>
+          </tr>
+        </thead>
+        <tbody id="exportTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>変更ログ</h3>
+    <div class="table-wrapper">
+      <table class="log-table">
+        <thead><tr><th>日時</th><th>変更者</th><th>対象日</th><th>項目</th><th>変更前</th><th>変更後</th></tr></thead>
+        <tbody id="changeLogBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- トースト -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ==================== グローバル状態 ====================
+var tableData = [];
+var focusedCell = { row: -1, col: -1 };
+var editingCell = null;
+var undoStack = [];
+var redoStack = [];
+var MAX_UNDO = 30;
+var statusDropdown = null;
+
+var EDITABLE_COLS = [2, 3, 4, 5, 6, 7, 12]; // trucks, status, yesterdayCount, yesterdayAmount, todayCount, todayAmount, memo
+var COL_KEYS = [
+  'date', 'dayName', 'trucks', 'status',
+  'yesterdayCount', 'yesterdayAmount', 'todayCount', 'todayAmount',
+  'totalCount', 'totalAmount', 'perTruckCount', 'perTruckAmount',
+  'memo'
+];
+var COL_SAVE_KEYS = {
+  2: 'trucks', 3: 'status',
+  4: 'yesterdayCount', 5: 'yesterdayAmount',
+  6: 'todayCount', 7: 'todayAmount',
+  12: 'memo'
+};
+var NUMERIC_COLS = [2, 4, 5, 6, 7];
+var CALC_COLS = [8, 9, 10, 11]; // totalCount, totalAmount, perTruckCount, perTruckAmount
+var NUM_COLS = 13;
+
+// ==================== 初期化 ====================
+document.addEventListener('DOMContentLoaded', function() {
+  updateDateTime();
+  setInterval(updateDateTime, 60000);
+  initTabs();
+  setQuickRange('thisWeek');
+  loadData();
+
+  // デフォルトのエクスポート期間（今月）
+  var now = new Date();
+  document.getElementById('exportStartDate').value = formatDate(new Date(now.getFullYear(), now.getMonth(), 1));
+  document.getElementById('exportEndDate').value = formatDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+});
+
+function updateDateTime() {
+  var now = new Date();
+  var days = ['日','月','火','水','木','金','土'];
+  document.getElementById('currentDateTime').textContent =
+    now.getFullYear() + '/' + (now.getMonth()+1) + '/' + now.getDate() + '(' + days[now.getDay()] + ') ' +
+    ('0'+now.getHours()).slice(-2) + ':' + ('0'+now.getMinutes()).slice(-2);
+}
+
+// ==================== タブ切り替え ====================
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+
+      if (btn.dataset.tab === 'settings') {
+        loadDaySettings();
+        loadSpecialDays();
+      } else if (btn.dataset.tab === 'data') {
+        loadExportData();
+        loadChangeLog();
+      }
+    });
+  });
+}
+
+// ==================== 日付ユーティリティ ====================
+function formatDate(d) {
+  var y = d.getFullYear();
+  var m = ('0' + (d.getMonth() + 1)).slice(-2);
+  var day = ('0' + d.getDate()).slice(-2);
+  return y + '-' + m + '-' + day;
+}
+
+function todayStr() { return formatDate(new Date()); }
+
+function getMonday(d) {
+  var date = new Date(d);
+  var day = date.getDay();
+  var diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(date.setDate(diff));
+}
+
+function setQuickRange(type) {
+  var now = new Date();
+  var start, end;
+  if (type === 'thisWeek') {
+    start = getMonday(now);
+    end = new Date(start);
+    end.setDate(end.getDate() + 6);
+  } else if (type === 'nextWeek') {
+    start = getMonday(now);
+    start.setDate(start.getDate() + 7);
+    end = new Date(start);
+    end.setDate(end.getDate() + 6);
+  } else if (type === 'thisMonth') {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  }
+  document.getElementById('startDate').value = formatDate(start);
+  document.getElementById('endDate').value = formatDate(end);
+}
+
+function formatNumber(n) {
+  if (n === null || n === undefined || n === '') return '';
+  return Number(n).toLocaleString('ja-JP');
+}
+
+// ==================== データ読み込み ====================
+function loadData() {
+  var startDate = document.getElementById('startDate').value;
+  var endDate = document.getElementById('endDate').value;
+  if (!startDate || !endDate) {
+    showToast('日付範囲を指定してください', 'error');
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      tableData = data || [];
+      renderTable();
+      updateSummary();
+    })
+    .withFailureHandler(function(err) {
+      showToast('データ取得エラー: ' + err.message, 'error');
+    })
+    .getRows(startDate, endDate);
+}
+
+// ==================== テーブル描画 ====================
+function renderTable() {
+  var tbody = document.getElementById('mainTableBody');
+  tbody.innerHTML = '';
+  var today = todayStr();
+
+  tableData.forEach(function(row, ri) {
+    var tr = document.createElement('tr');
+    if (row.date === today) tr.className = 'today-row';
+    else if (row.date < today) tr.className = 'past-row';
+
+    // 列の順序: date, dayName, trucks, status, yesterdayCount, yesterdayAmount, todayCount, todayAmount, totalCount, totalAmount, perTruckCount, perTruckAmount, memo
+    var cellValues = [
+      row.date, row.dayName, row.trucks, row.status,
+      row.yesterdayCount, row.yesterdayAmount,
+      row.todayCount, row.todayAmount,
+      row.totalCount, row.totalAmount,
+      row.perTruckCount, row.perTruckAmount,
+      row.memo
+    ];
+
+    for (var ci = 0; ci < NUM_COLS; ci++) {
+      var td = document.createElement('td');
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.row = ri;
+      cell.dataset.col = ci;
+      cell.setAttribute('tabindex', '-1');
+
+      var isEditable = EDITABLE_COLS.indexOf(ci) !== -1;
+      var isCalc = CALC_COLS.indexOf(ci) !== -1;
+
+      if (isEditable) {
+        cell.classList.add('editable');
+      } else {
+        cell.classList.add('readonly');
+      }
+
+      if (isCalc) {
+        cell.classList.add('calc-col');
+      }
+
+      // テキスト配置
+      if (ci === 0 || ci === 12) cell.classList.add('text-left');
+      else if (ci === 1 || ci === 3) cell.classList.add('text-center');
+
+      // 値を表示
+      var val = cellValues[ci];
+      if (ci === 3) {
+        // ステータスはバッジ表示
+        cell.innerHTML = '<span class="status-badge status-' + val + '">' + val + '</span>';
+      } else if (NUMERIC_COLS.indexOf(ci) !== -1 || CALC_COLS.indexOf(ci) !== -1) {
+        cell.textContent = formatNumber(val);
+      } else {
+        cell.textContent = val || '';
+      }
+
+      // イベント
+      cell.addEventListener('mousedown', onCellMouseDown);
+      cell.addEventListener('dblclick', onCellDblClick);
+
+      td.appendChild(cell);
+      tr.appendChild(td);
+    }
+
+    tbody.appendChild(tr);
+  });
+
+  focusedCell = { row: -1, col: -1 };
+}
+
+// ==================== セル操作 ====================
+function getCellEl(row, col) {
+  return document.querySelector('.cell[data-row="' + row + '"][data-col="' + col + '"]');
+}
+
+function onCellMouseDown(e) {
+  var cell = e.currentTarget;
+  var row = parseInt(cell.dataset.row);
+  var col = parseInt(cell.dataset.col);
+
+  if (editingCell && (editingCell.row !== row || editingCell.col !== col)) {
+    commitEdit();
+  }
+  closeStatusDropdown();
+  setFocus(row, col);
+}
+
+function onCellDblClick(e) {
+  var cell = e.currentTarget;
+  var row = parseInt(cell.dataset.row);
+  var col = parseInt(cell.dataset.col);
+  if (EDITABLE_COLS.indexOf(col) !== -1) {
+    if (col === 3) {
+      showStatusDropdown(row, col);
+    } else {
+      startEdit(row, col, false);
+    }
+  }
+}
+
+function setFocus(row, col) {
+  // 既存フォーカスを解除
+  document.querySelectorAll('.cell.focused').forEach(function(c) { c.classList.remove('focused'); });
+
+  focusedCell = { row: row, col: col };
+  var cell = getCellEl(row, col);
+  if (cell) {
+    cell.classList.add('focused');
+    cell.focus();
+  }
+}
+
+function startEdit(row, col, overwrite) {
+  if (EDITABLE_COLS.indexOf(col) === -1) return;
+  if (col === 3) { showStatusDropdown(row, col); return; }
+
+  var cell = getCellEl(row, col);
+  if (!cell) return;
+
+  var key = COL_KEYS[col];
+  var currentVal = tableData[row][key];
+  if (currentVal === null || currentVal === undefined) currentVal = '';
+
+  editingCell = { row: row, col: col, originalValue: currentVal };
+  cell.classList.add('editing');
+
+  var input = document.createElement('input');
+  input.className = 'cell-input';
+  if (col === 12) input.classList.add('text-left');
+  input.type = (NUMERIC_COLS.indexOf(col) !== -1) ? 'number' : 'text';
+  input.value = overwrite ? '' : String(currentVal);
+
+  input.addEventListener('keydown', onEditKeyDown);
+  input.addEventListener('blur', function() {
+    // 小さな遅延でblur時コミット（タブ移動対応）
+    setTimeout(function() { if (editingCell) commitEdit(); }, 50);
+  });
+
+  cell.innerHTML = '';
+  cell.appendChild(input);
+  input.focus();
+  if (!overwrite) input.select();
+}
+
+function commitEdit() {
+  if (!editingCell) return;
+  var row = editingCell.row;
+  var col = editingCell.col;
+  var originalValue = editingCell.originalValue;
+
+  var cell = getCellEl(row, col);
+  if (!cell) { editingCell = null; return; }
+
+  var input = cell.querySelector('input');
+  var newValue = input ? input.value : String(originalValue);
+  editingCell = null;
+  cell.classList.remove('editing');
+
+  var key = COL_KEYS[col];
+
+  // 数値変換
+  if (NUMERIC_COLS.indexOf(col) !== -1) {
+    newValue = Number(newValue) || 0;
+  }
+
+  // 変更がなければ再描画だけ
+  if (String(newValue) === String(originalValue)) {
+    refreshCellDisplay(row, col);
+    return;
+  }
+
+  // Undo記録
+  pushUndo(row, key, originalValue, newValue);
+
+  // ローカル更新
+  tableData[row][key] = newValue;
+  recalcLocal(row);
+  refreshRow(row);
+
+  // サーバー保存
+  var saveKey = COL_SAVE_KEYS[col];
+  var date = tableData[row].date;
+  cell.classList.add('saving');
+
+  google.script.run
+    .withSuccessHandler(function(updatedRow) {
+      cell.classList.remove('saving');
+      if (updatedRow) {
+        tableData[row] = updatedRow;
+        refreshRow(row);
+      }
+      updateSummary();
+    })
+    .withFailureHandler(function(err) {
+      cell.classList.remove('saving');
+      cell.classList.add('error');
+      showToast('保存エラー: ' + err.message, 'error');
+      setTimeout(function() { cell.classList.remove('error'); }, 3000);
+    })
+    .saveCell(date, saveKey, newValue);
+}
+
+function cancelEdit() {
+  if (!editingCell) return;
+  var row = editingCell.row;
+  var col = editingCell.col;
+  editingCell = null;
+  var cell = getCellEl(row, col);
+  if (cell) {
+    cell.classList.remove('editing');
+    refreshCellDisplay(row, col);
+  }
+}
+
+function refreshCellDisplay(row, col) {
+  var cell = getCellEl(row, col);
+  if (!cell) return;
+  var key = COL_KEYS[col];
+  var val = tableData[row][key];
+
+  if (col === 3) {
+    cell.innerHTML = '<span class="status-badge status-' + val + '">' + val + '</span>';
+  } else if (NUMERIC_COLS.indexOf(col) !== -1 || CALC_COLS.indexOf(col) !== -1) {
+    cell.textContent = formatNumber(val);
+  } else {
+    cell.textContent = val || '';
+  }
+}
+
+function refreshRow(row) {
+  for (var col = 0; col < NUM_COLS; col++) {
+    refreshCellDisplay(row, col);
+  }
+}
+
+function recalcLocal(row) {
+  var d = tableData[row];
+  var trucks = Number(d.trucks) || 0;
+  d.totalCount = (Number(d.yesterdayCount) || 0) + (Number(d.todayCount) || 0);
+  d.totalAmount = (Number(d.yesterdayAmount) || 0) + (Number(d.todayAmount) || 0);
+  d.perTruckCount = trucks > 0 ? Math.round(d.totalCount / trucks * 10) / 10 : 0;
+  d.perTruckAmount = trucks > 0 ? Math.round(d.totalAmount / trucks) : 0;
+}
+
+// ==================== キーボード操作 ====================
+document.addEventListener('keydown', function(e) {
+  if (editingCell) return; // 編集中はedit用ハンドラが処理
+  if (focusedCell.row < 0) return;
+
+  var row = focusedCell.row;
+  var col = focusedCell.col;
+
+  // Ctrl+Z: Undo
+  if (e.ctrlKey && e.key === 'z') {
+    e.preventDefault();
+    doUndo();
+    return;
+  }
+  // Ctrl+Y: Redo
+  if (e.ctrlKey && e.key === 'y') {
+    e.preventDefault();
+    doRedo();
+    return;
+  }
+
+  // 矢印キー移動
+  if (e.key === 'ArrowUp') { e.preventDefault(); moveFocus(row - 1, col); return; }
+  if (e.key === 'ArrowDown') { e.preventDefault(); moveFocus(row + 1, col); return; }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); moveFocus(row, col - 1); return; }
+  if (e.key === 'ArrowRight') { e.preventDefault(); moveFocus(row, col + 1); return; }
+
+  // Enter: 下へ
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (EDITABLE_COLS.indexOf(col) !== -1) {
+      if (col === 3) showStatusDropdown(row, col);
+      else startEdit(row, col, false);
+    }
+    return;
+  }
+
+  // Tab: 右へ, Shift+Tab: 左へ
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    if (e.shiftKey) moveFocus(row, col - 1);
+    else moveFocus(row, col + 1);
+    return;
+  }
+
+  // F2: 編集モード（既存値保持）
+  if (e.key === 'F2') {
+    e.preventDefault();
+    if (EDITABLE_COLS.indexOf(col) !== -1 && col !== 3) {
+      startEdit(row, col, false);
+    }
+    return;
+  }
+
+  // Delete: 行削除
+  if (e.key === 'Delete') {
+    e.preventDefault();
+    if (row >= 0 && row < tableData.length) {
+      showDeleteRowDialog(row);
+    }
+    return;
+  }
+
+  // スペース: ステータス操作
+  if (e.key === ' ') {
+    if (col === 3) {
+      e.preventDefault();
+      showStatusDropdown(row, col);
+      return;
+    }
+  }
+
+  // 数字キーで即時入力開始
+  if (EDITABLE_COLS.indexOf(col) !== -1 && col !== 3) {
+    if (/^[0-9]$/.test(e.key) || e.key === '-' || e.key === '.') {
+      e.preventDefault();
+      startEdit(row, col, true);
+      // 入力文字を流し込む
+      setTimeout(function() {
+        var cell = getCellEl(row, col);
+        if (cell) {
+          var input = cell.querySelector('input');
+          if (input) input.value = e.key;
+        }
+      }, 0);
+      return;
+    }
+    // 文字キーで即時入力（備考列）
+    if (col === 12 && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      e.preventDefault();
+      startEdit(row, col, true);
+      setTimeout(function() {
+        var cell = getCellEl(row, col);
+        if (cell) {
+          var input = cell.querySelector('input');
+          if (input) input.value = e.key;
+        }
+      }, 0);
+      return;
+    }
+  }
+});
+
+function onEditKeyDown(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    var row = editingCell ? editingCell.row : focusedCell.row;
+    commitEdit();
+    moveFocus(row + 1, focusedCell.col);
+    return;
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    var row = editingCell ? editingCell.row : focusedCell.row;
+    var col = editingCell ? editingCell.col : focusedCell.col;
+    commitEdit();
+    if (e.shiftKey) moveFocus(row, col - 1);
+    else moveFocus(row, col + 1);
+    return;
+  }
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    cancelEdit();
+    return;
+  }
+}
+
+function moveFocus(row, col) {
+  if (row < 0) row = 0;
+  if (row >= tableData.length) row = tableData.length - 1;
+  if (col < 0) col = 0;
+  if (col >= NUM_COLS) col = NUM_COLS - 1;
+  setFocus(row, col);
+}
+
+// ==================== ステータスドロップダウン ====================
+function showStatusDropdown(row, col) {
+  closeStatusDropdown();
+  var cell = getCellEl(row, col);
+  if (!cell) return;
+  var td = cell.parentElement;
+
+  var dropdown = document.createElement('div');
+  dropdown.className = 'status-dropdown';
+  statusDropdown = { el: dropdown, row: row, col: col };
+
+  var statuses = ['受付中', '注意', '満車', '締切済'];
+  statuses.forEach(function(s) {
+    var opt = document.createElement('div');
+    opt.className = 'option';
+    opt.innerHTML = '<span class="status-badge status-' + s + '">' + s + '</span>';
+    opt.addEventListener('click', function(e) {
+      e.stopPropagation();
+      selectStatus(row, s);
+    });
+    dropdown.appendChild(opt);
+  });
+
+  td.appendChild(dropdown);
+
+  // クリック外で閉じる
+  setTimeout(function() {
+    document.addEventListener('click', closeStatusDropdownOnClick);
+  }, 0);
+}
+
+function closeStatusDropdownOnClick(e) {
+  if (statusDropdown && !statusDropdown.el.contains(e.target)) {
+    closeStatusDropdown();
+  }
+}
+
+function closeStatusDropdown() {
+  if (statusDropdown) {
+    statusDropdown.el.remove();
+    document.removeEventListener('click', closeStatusDropdownOnClick);
+    statusDropdown = null;
+  }
+}
+
+function selectStatus(row, status) {
+  var oldStatus = tableData[row].status;
+  closeStatusDropdown();
+
+  if (oldStatus === status) {
+    refreshCellDisplay(row, 3);
+    return;
+  }
+
+  pushUndo(row, 'status', oldStatus, status);
+  tableData[row].status = status;
+  refreshCellDisplay(row, 3);
+
+  // サーバー保存
+  var cell = getCellEl(row, 3);
+  if (cell) cell.classList.add('saving');
+
+  google.script.run
+    .withSuccessHandler(function() {
+      if (cell) cell.classList.remove('saving');
+    })
+    .withFailureHandler(function(err) {
+      if (cell) { cell.classList.remove('saving'); cell.classList.add('error'); }
+      showToast('保存エラー: ' + err.message, 'error');
+    })
+    .saveCell(tableData[row].date, 'status', status);
+}
+
+// ==================== Undo/Redo ====================
+function pushUndo(row, key, oldValue, newValue) {
+  undoStack.push({ row: row, key: key, oldValue: oldValue, newValue: newValue });
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack = [];
+}
+
+function doUndo() {
+  if (undoStack.length === 0) return;
+  var action = undoStack.pop();
+  redoStack.push(action);
+
+  tableData[action.row][action.key] = action.oldValue;
+  recalcLocal(action.row);
+  refreshRow(action.row);
+
+  // サーバー保存
+  var colIndex = COL_KEYS.indexOf(action.key);
+  var saveKey = COL_SAVE_KEYS[colIndex];
+  if (saveKey) {
+    google.script.run
+      .withFailureHandler(function(err) {
+        showToast('Undo保存エラー: ' + err.message, 'error');
+      })
+      .saveCell(tableData[action.row].date, saveKey, action.oldValue);
+  }
+  updateSummary();
+}
+
+function doRedo() {
+  if (redoStack.length === 0) return;
+  var action = redoStack.pop();
+  undoStack.push(action);
+
+  tableData[action.row][action.key] = action.newValue;
+  recalcLocal(action.row);
+  refreshRow(action.row);
+
+  var colIndex = COL_KEYS.indexOf(action.key);
+  var saveKey = COL_SAVE_KEYS[colIndex];
+  if (saveKey) {
+    google.script.run
+      .withFailureHandler(function(err) {
+        showToast('Redo保存エラー: ' + err.message, 'error');
+      })
+      .saveCell(tableData[action.row].date, saveKey, action.newValue);
+  }
+  updateSummary();
+}
+
+// ==================== サマリー更新 ====================
+function updateSummary() {
+  if (tableData.length === 0) {
+    document.getElementById('sumTotalCount').textContent = '-';
+    document.getElementById('sumTotalAmount').textContent = '-';
+    document.getElementById('avgTrucks').textContent = '-';
+    document.getElementById('avgPerTruckCount').textContent = '-';
+    document.getElementById('avgPerTruckAmount').textContent = '-';
+    return;
+  }
+
+  var totalCount = 0, totalAmount = 0, totalTrucks = 0, count = 0;
+  var sumPerTruckCount = 0, sumPerTruckAmount = 0;
+
+  tableData.forEach(function(r) {
+    totalCount += Number(r.totalCount) || 0;
+    totalAmount += Number(r.totalAmount) || 0;
+    totalTrucks += Number(r.trucks) || 0;
+    sumPerTruckCount += Number(r.perTruckCount) || 0;
+    sumPerTruckAmount += Number(r.perTruckAmount) || 0;
+    count++;
+  });
+
+  document.getElementById('sumTotalCount').textContent = formatNumber(totalCount);
+  document.getElementById('sumTotalAmount').textContent = '¥' + formatNumber(totalAmount);
+  document.getElementById('avgTrucks').textContent = count > 0 ? (totalTrucks / count).toFixed(1) : '-';
+  document.getElementById('avgPerTruckCount').textContent = count > 0 ? (sumPerTruckCount / count).toFixed(1) : '-';
+  document.getElementById('avgPerTruckAmount').textContent = count > 0 ? '¥' + formatNumber(Math.round(sumPerTruckAmount / count)) : '-';
+}
+
+// ==================== 行追加ダイアログ ====================
+function showAddRowDialog() {
+  var overlay = document.createElement('div');
+  overlay.className = 'dialog-overlay';
+  overlay.innerHTML =
+    '<div class="dialog">' +
+      '<h3>配送日を追加</h3>' +
+      '<p>追加する日付を選択してください。</p>' +
+      '<input type="date" id="addRowDate" style="padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.95rem;min-height:44px;width:100%;margin-bottom:16px;" value="' + todayStr() + '">' +
+      '<div class="dialog-actions">' +
+        '<button class="cancel" onclick="this.closest(\'.dialog-overlay\').remove()">キャンセル</button>' +
+        '<button class="primary" onclick="doAddRow()">追加</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function doAddRow() {
+  var dateInput = document.getElementById('addRowDate');
+  var date = dateInput.value;
+  if (!date) { showToast('日付を入力してください', 'error'); return; }
+
+  document.querySelector('.dialog-overlay').remove();
+
+  google.script.run
+    .withSuccessHandler(function(newRow) {
+      showToast(date + ' を追加しました', 'success');
+      loadData();
+    })
+    .withFailureHandler(function(err) {
+      showToast('追加エラー: ' + err.message, 'error');
+    })
+    .addRow(date);
+}
+
+// ==================== 行削除ダイアログ ====================
+function showDeleteRowDialog(rowIndex) {
+  var row = tableData[rowIndex];
+  var overlay = document.createElement('div');
+  overlay.className = 'dialog-overlay';
+  overlay.innerHTML =
+    '<div class="dialog">' +
+      '<h3>行を削除</h3>' +
+      '<p>' + row.date + '（' + row.dayName + '）のデータを削除しますか？<br>この操作は取り消せません。</p>' +
+      '<div class="dialog-actions">' +
+        '<button class="cancel" onclick="this.closest(\'.dialog-overlay\').remove()">キャンセル</button>' +
+        '<button class="confirm" onclick="doDeleteRow(\'' + row.date + '\')">削除</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function doDeleteRow(date) {
+  document.querySelector('.dialog-overlay').remove();
+
+  google.script.run
+    .withSuccessHandler(function() {
+      showToast(date + ' を削除しました', 'success');
+      loadData();
+    })
+    .withFailureHandler(function(err) {
+      showToast('削除エラー: ' + err.message, 'error');
+    })
+    .deleteRow(date);
+}
+
+// ==================== 設定タブ ====================
+function loadDaySettings() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      renderDaySettings(data || []);
+    })
+    .withFailureHandler(function(err) {
+      showToast('曜日設定の取得エラー: ' + err.message, 'error');
+    })
+    .getDaySettings();
+}
+
+function renderDaySettings(settings) {
+  var tbody = document.getElementById('daySettingsBody');
+  tbody.innerHTML = '';
+  var dayOrder = ['月', '火', '水', '木', '金', '土', '日'];
+
+  dayOrder.forEach(function(day) {
+    var setting = settings.find(function(s) { return s.dayName === day; }) || { dayName: day, trucks: 0, enabled: '配送なし' };
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + day + '</td>' +
+      '<td><input type="number" min="0" value="' + (setting.trucks || 0) + '" data-day="' + day + '" class="day-trucks"></td>' +
+      '<td><select data-day="' + day + '" class="day-enabled">' +
+        '<option value="配送あり"' + (setting.enabled === '配送あり' ? ' selected' : '') + '>配送あり</option>' +
+        '<option value="配送なし"' + (setting.enabled === '配送なし' ? ' selected' : '') + '>配送なし</option>' +
+      '</select></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function saveDaySettingsUI() {
+  var settings = [];
+  document.querySelectorAll('.day-trucks').forEach(function(input) {
+    var day = input.dataset.day;
+    var trucks = Number(input.value) || 0;
+    var enabled = document.querySelector('.day-enabled[data-day="' + day + '"]').value;
+    settings.push({ dayName: day, trucks: trucks, enabled: enabled });
+  });
+
+  google.script.run
+    .withSuccessHandler(function() {
+      showToast('曜日設定を保存しました', 'success');
+    })
+    .withFailureHandler(function(err) {
+      showToast('保存エラー: ' + err.message, 'error');
+    })
+    .saveDaySettings(settings);
+}
+
+function loadSpecialDays() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      renderSpecialDays(data || []);
+    })
+    .withFailureHandler(function(err) {
+      showToast('特別日設定の取得エラー: ' + err.message, 'error');
+    })
+    .getSpecialDays();
+}
+
+function renderSpecialDays(days) {
+  var tbody = document.getElementById('specialDaysBody');
+  tbody.innerHTML = '';
+
+  if (days.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">特別日の設定はありません</td></tr>';
+    return;
+  }
+
+  days.forEach(function(d) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + d.date + '</td>' +
+      '<td>' + d.trucks + '</td>' +
+      '<td>' + d.type + '</td>' +
+      '<td>' + (d.memo || '') + '</td>' +
+      '<td><button class="delete-btn-small" onclick="deleteSpecialDayUI(\'' + d.date + '\')">削除</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function saveSpecialDayUI() {
+  var date = document.getElementById('specialDate').value;
+  if (!date) { showToast('日付を入力してください', 'error'); return; }
+
+  var data = {
+    date: date,
+    trucks: Number(document.getElementById('specialTrucks').value) || 0,
+    type: document.getElementById('specialType').value,
+    memo: document.getElementById('specialMemo').value
+  };
+
+  google.script.run
+    .withSuccessHandler(function() {
+      showToast('特別日を追加しました', 'success');
+      loadSpecialDays();
+      document.getElementById('specialDate').value = '';
+      document.getElementById('specialTrucks').value = '0';
+      document.getElementById('specialMemo').value = '';
+    })
+    .withFailureHandler(function(err) {
+      showToast('保存エラー: ' + err.message, 'error');
+    })
+    .saveSpecialDay(data);
+}
+
+function deleteSpecialDayUI(date) {
+  if (!confirm(date + ' の特別日設定を削除しますか？')) return;
+
+  google.script.run
+    .withSuccessHandler(function() {
+      showToast('特別日を削除しました', 'success');
+      loadSpecialDays();
+    })
+    .withFailureHandler(function(err) {
+      showToast('削除エラー: ' + err.message, 'error');
+    })
+    .deleteSpecialDay(date);
+}
+
+// ==================== データ確認タブ ====================
+function loadExportData() {
+  var start = document.getElementById('exportStartDate').value;
+  var end = document.getElementById('exportEndDate').value;
+  if (!start || !end) return;
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      renderExportTable(data || []);
+    })
+    .withFailureHandler(function(err) {
+      showToast('データ取得エラー: ' + err.message, 'error');
+    })
+    .getRows(start, end);
+}
+
+function renderExportTable(data) {
+  var tbody = document.getElementById('exportTableBody');
+  tbody.innerHTML = '';
+
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#999;padding:20px;">データなし</td></tr>';
+    return;
+  }
+
+  data.forEach(function(r) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td style="text-align:left">' + r.date + '</td>' +
+      '<td style="text-align:center">' + r.dayName + '</td>' +
+      '<td>' + r.trucks + '</td>' +
+      '<td style="text-align:center"><span class="status-badge status-' + r.status + '">' + r.status + '</span></td>' +
+      '<td>' + formatNumber(r.totalCount) + '</td>' +
+      '<td>' + formatNumber(r.totalAmount) + '</td>' +
+      '<td>' + r.perTruckCount + '</td>' +
+      '<td>' + formatNumber(r.perTruckAmount) + '</td>' +
+      '<td>' + formatNumber(r.yesterdayCount) + '</td>' +
+      '<td>' + formatNumber(r.yesterdayAmount) + '</td>' +
+      '<td>' + formatNumber(r.todayCount) + '</td>' +
+      '<td>' + formatNumber(r.todayAmount) + '</td>' +
+      '<td style="text-align:left">' + (r.memo || '') + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function doExportCSV() {
+  var start = document.getElementById('exportStartDate').value;
+  var end = document.getElementById('exportEndDate').value;
+  if (!start || !end) { showToast('日付範囲を指定してください', 'error'); return; }
+
+  google.script.run
+    .withSuccessHandler(function(csv) {
+      if (!csv) { showToast('データがありません', 'info'); return; }
+
+      // BOM付きUTF-8でCSVダウンロード
+      var bom = '\uFEFF';
+      var blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = '満車管理_' + start + '_' + end + '.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('CSVをダウンロードしました', 'success');
+    })
+    .withFailureHandler(function(err) {
+      showToast('エクスポートエラー: ' + err.message, 'error');
+    })
+    .exportCSV(start, end);
+}
+
+function loadChangeLog() {
+  google.script.run
+    .withSuccessHandler(function(logs) {
+      renderChangeLog(logs || []);
+    })
+    .withFailureHandler(function(err) {
+      showToast('変更ログ取得エラー: ' + err.message, 'error');
+    })
+    .getChangeLog(100);
+}
+
+function renderChangeLog(logs) {
+  var tbody = document.getElementById('changeLogBody');
+  tbody.innerHTML = '';
+
+  if (logs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">変更ログはありません</td></tr>';
+    return;
+  }
+
+  logs.forEach(function(log) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + log.timestamp + '</td>' +
+      '<td>' + log.user + '</td>' +
+      '<td>' + log.targetDate + '</td>' +
+      '<td>' + log.field + '</td>' +
+      '<td>' + log.oldValue + '</td>' +
+      '<td>' + log.newValue + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+// ==================== トースト ====================
+function showToast(msg, type) {
+  var container = document.getElementById('toastContainer');
+  var toast = document.createElement('div');
+  toast.className = 'toast ' + (type || 'info');
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(function() {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s';
+    setTimeout(function() { toast.remove(); }, 300);
+  }, 3000);
+}
+</script>
+
+</body>
+</html>
