@@ -31,6 +31,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
 .data-table tr.today-row{background:#e8f0fe!important}
 .data-table tr.past-row{background:#f8f8f8}
 .data-table tr.past-row:hover{background:#f0f0f0}
+.data-table tr.saturday-row{background:#e3f2fd}
+.data-table tr.saturday-row:hover{background:#bbdefb}
+.data-table tr.sunday-row,.data-table tr.holiday-row{background:#fce4ec}
+.data-table tr.sunday-row:hover,.data-table tr.holiday-row:hover{background:#f8bbd0}
+.data-table tr.saturday-row.past-row{background:#e3f2fd99}
+.data-table tr.sunday-row.past-row,.data-table tr.holiday-row.past-row{background:#fce4ec99}
 .cell{width:100%;height:100%;padding:8px 6px;display:flex;align-items:center;justify-content:flex-end;cursor:default;outline:none;min-height:40px;user-select:none}
 .cell.text-left{justify-content:flex-start}
 .cell.text-center{justify-content:center}
@@ -150,17 +156,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
       <thead><tr>
         <th style="min-width:90px">配送日</th>
         <th style="min-width:36px">曜日</th>
-        <th style="min-width:50px">台数</th>
+        <th style="width:40px;min-width:40px">台数</th>
         <th style="min-width:72px">ステータス</th>
-        <th style="min-width:65px">昨日まで<br>件数</th>
-        <th style="min-width:75px">昨日まで<br>金額<span class="unit-label">千円</span></th>
-        <th style="min-width:60px">当日<br>件数</th>
-        <th style="min-width:70px">当日<br>金額<span class="unit-label">千円</span></th>
-        <th style="min-width:65px">合計<br>件数</th>
-        <th style="min-width:80px">合計<br>金額<span class="unit-label">千円</span></th>
-        <th class="highlight-col" style="min-width:80px">1台あたり<br>件数</th>
-        <th class="highlight-col" style="min-width:90px">1台あたり<br>金額<span class="unit-label">千円</span></th>
-        <th style="min-width:100px">備考</th>
+        <th style="width:42px;min-width:42px">昨日まで<br>件数</th>
+        <th style="width:72px;min-width:72px">昨日まで<br>金額<span class="unit-label">千円</span></th>
+        <th style="width:42px;min-width:42px">当日<br>件数</th>
+        <th style="width:72px;min-width:72px">当日<br>金額<span class="unit-label">千円</span></th>
+        <th style="width:42px;min-width:42px">合計<br>件数</th>
+        <th style="width:72px;min-width:72px">合計<br>金額<span class="unit-label">千円</span></th>
+        <th class="highlight-col" style="width:50px;min-width:50px">1台あたり<br>件数</th>
+        <th class="highlight-col" style="width:72px;min-width:72px">1台あたり<br>金額<span class="unit-label">千円</span></th>
+        <th style="min-width:200px">備考</th>
       </tr></thead>
       <tbody id="mainTableBody"></tbody>
     </table>
@@ -320,6 +326,7 @@ var MAX_UNDO = 30;
 var statusDropdown = null;
 var regressionModel = null; // 件数モデル
 var regressionAmountModel = null; // 金額モデル
+var holidayDateSet = {}; // 祝日日付セット（renderTable用）
 
 // 列定義 (表示順)
 // 0:date, 1:dayName, 2:trucks, 3:status,
@@ -339,6 +346,7 @@ document.addEventListener('DOMContentLoaded', function(){
   updateDateTime();
   setInterval(updateDateTime,60000);
   initTabs();
+  loadHolidayDateSet();
   loadNext30();
   var now = new Date();
   document.getElementById('exportStartDate').value = fmtDate(new Date(now.getFullYear(),now.getMonth(),1));
@@ -365,6 +373,21 @@ function initTabs(){
       else if(btn.dataset.tab==='data'){loadExportData();loadChangeLog();}
     });
   });
+}
+
+// ==================== 祝日セット読み込み ====================
+function loadHolidayDateSet(){
+  google.script.run.withSuccessHandler(function(holidays){
+    holidayDateSet={};
+    if(!holidays)return;
+    holidays.forEach(function(h){
+      var start=new Date(h.date);
+      var end=h.endDate?new Date(h.endDate):start;
+      for(var dd=new Date(start);dd<=end;dd.setDate(dd.getDate()+1)){
+        if(h.type==='祝日')holidayDateSet[fmtDate(dd)]=h.name;
+      }
+    });
+  }).getHolidays();
 }
 
 // ==================== 日付ユーティリティ ====================
@@ -395,8 +418,14 @@ function renderTable(){
   var today=todayStr();
   tableData.forEach(function(row,ri){
     var tr=document.createElement('tr');
-    if(row.date===today)tr.className='today-row';
-    else if(row.date<today)tr.className='past-row';
+    var classes=[];
+    if(row.date===today)classes.push('today-row');
+    else if(row.date<today)classes.push('past-row');
+    // 曜日・祝日による行色
+    if(row.dayName==='土')classes.push('saturday-row');
+    else if(row.dayName==='日')classes.push('sunday-row');
+    if(holidayDateSet[row.date])classes.push('holiday-row');
+    tr.className=classes.join(' ');
     var vals=[row.date,row.dayName,row.trucks,row.status,row.yesterdayCount,row.yesterdayAmount,row.todayCount,row.todayAmount,row.totalCount,row.totalAmount,row.perTruckCount,row.perTruckAmount,row.memo];
     for(var ci=0;ci<NUM_COLS;ci++){
       var td=document.createElement('td');
@@ -529,20 +558,18 @@ document.addEventListener('keydown',function(e){
 function onEditKeyDown(e){
   var r=editingCell?editingCell.row:focusedCell.row;
   var c=editingCell?editingCell.col:focusedCell.col;
-  if(e.key==='Enter'){e.preventDefault();commitEdit();moveFocus(r+1,c);return}
-  if(e.key==='Tab'){e.preventDefault();commitEdit();if(e.shiftKey)moveFocus(r,c-1);else moveFocus(r,c+1);return}
-  if(e.key==='Escape'){e.preventDefault();cancelEdit();return}
-  // 矢印キーで確定して移動
-  if(e.key==='ArrowUp'){e.preventDefault();commitEdit();moveFocus(r-1,c);return}
-  if(e.key==='ArrowDown'){e.preventDefault();commitEdit();moveFocus(r+1,c);return}
+  if(e.key==='Enter'){e.preventDefault();e.stopPropagation();commitEdit();moveFocus(r+1,c);return}
+  if(e.key==='Tab'){e.preventDefault();e.stopPropagation();commitEdit();if(e.shiftKey)moveFocus(r,c-1);else moveFocus(r,c+1);return}
+  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();cancelEdit();return}
+  // 矢印キーで確定して移動（stopPropagationでdocument側の二重移動を防止）
+  if(e.key==='ArrowUp'){e.preventDefault();e.stopPropagation();commitEdit();moveFocus(r-1,c);return}
+  if(e.key==='ArrowDown'){e.preventDefault();e.stopPropagation();commitEdit();moveFocus(r+1,c);return}
   if(e.key==='ArrowLeft'){
-    // カーソルが先頭なら確定して左移動
-    var inp=e.target;if(inp.selectionStart===0&&inp.selectionEnd===0){e.preventDefault();commitEdit();moveFocus(r,c-1);return}
-    // それ以外はデフォルト動作(テキスト内移動)
+    var inp=e.target;if(inp.selectionStart===0&&inp.selectionEnd===0){e.preventDefault();e.stopPropagation();commitEdit();moveFocus(r,c-1);return}
     return;
   }
   if(e.key==='ArrowRight'){
-    var inp=e.target;if(inp.selectionStart===inp.value.length){e.preventDefault();commitEdit();moveFocus(r,c+1);return}
+    var inp=e.target;if(inp.selectionStart===inp.value.length){e.preventDefault();e.stopPropagation();commitEdit();moveFocus(r,c+1);return}
     return;
   }
 }
