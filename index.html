@@ -5,526 +5,176 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>満車管理アプリ</title>
 <style>
-/* ==================== リセット & 基本 ==================== */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 14px; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-  background: #f0f2f5;
-  color: #1a1a1a;
-  line-height: 1.5;
-}
-
-/* ==================== ヘッダー ==================== */
-.app-header {
-  background: linear-gradient(135deg, #1e3a5f, #2d5986);
-  color: #fff;
-  padding: 12px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-.app-header h1 { font-size: 1.2rem; font-weight: 600; }
-
-/* ==================== タブ ==================== */
-.tab-bar {
-  display: flex;
-  background: #fff;
-  border-bottom: 2px solid #e0e0e0;
-  padding: 0 16px;
-}
-.tab-btn {
-  padding: 12px 24px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #666;
-  border-bottom: 3px solid transparent;
-  transition: all 0.2s;
-  min-height: 44px;
-}
-.tab-btn:hover { color: #1e3a5f; background: #f5f8fc; }
-.tab-btn.active { color: #1e3a5f; border-bottom-color: #1e3a5f; font-weight: 600; }
-
-.tab-content { display: none; padding: 16px; }
-.tab-content.active { display: block; }
-
-/* ==================== 満車管理表 ==================== */
-.controls-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 12px;
-  padding: 12px 16px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-.controls-bar label { font-size: 0.85rem; color: #555; font-weight: 500; }
-.controls-bar input[type="date"] {
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  min-height: 44px;
-}
-.quick-btn {
-  padding: 6px 14px;
-  border: 1px solid #1e3a5f;
-  background: #fff;
-  color: #1e3a5f;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  min-height: 44px;
-  transition: all 0.2s;
-}
-.quick-btn:hover { background: #1e3a5f; color: #fff; }
-.add-row-btn {
-  padding: 6px 14px;
-  border: none;
-  background: #2d8a4e;
-  color: #fff;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  min-height: 44px;
-  margin-left: auto;
-}
-.add-row-btn:hover { background: #236b3c; }
-
-/* ==================== テーブル ==================== */
-.table-wrapper {
-  overflow-x: auto;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-}
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-  min-width: 1100px;
-}
-.data-table th {
-  background: #2d5986;
-  color: #fff;
-  padding: 10px 8px;
-  text-align: center;
-  font-weight: 500;
-  font-size: 0.8rem;
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-.data-table td {
-  padding: 0;
-  border: 1px solid #e0e0e0;
-  text-align: right;
-  height: 40px;
-  min-height: 44px;
-  position: relative;
-}
-.data-table tr:hover { background: #f5f8fc; }
-.data-table tr.today-row { background: #e8f0fe !important; }
-.data-table tr.past-row { background: #f8f8f8; }
-.data-table tr.past-row:hover { background: #f0f0f0; }
-
-/* セル */
-.cell {
-  width: 100%;
-  height: 100%;
-  padding: 8px 8px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  cursor: default;
-  outline: none;
-  min-height: 40px;
-  user-select: none;
-}
-.cell.text-left { justify-content: flex-start; }
-.cell.text-center { justify-content: center; }
-.cell.editable { cursor: cell; }
-.cell.focused {
-  outline: 2px solid #1a73e8;
-  outline-offset: -2px;
-  background: #e8f0fe;
-}
-.cell.editing {
-  padding: 0;
-}
-.cell.readonly {
-  background: #f5f5f5;
-  color: #666;
-}
-.cell.calc-col {
-  background: #fff8e1;
-  font-weight: 500;
-}
-.cell.saving { opacity: 0.6; }
-.cell.error {
-  outline: 2px solid #d32f2f !important;
-  outline-offset: -2px;
-}
-
-.cell-input {
-  width: 100%;
-  height: 100%;
-  border: none;
-  outline: none;
-  padding: 8px;
-  font-size: 0.85rem;
-  text-align: right;
-  background: #fff;
-  font-family: inherit;
-}
-.cell-input.text-left { text-align: left; }
-
-/* ステータスバッジ */
-.status-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.status-受付中 { background: #c8e6c9; color: #2e7d32; }
-.status-注意 { background: #fff9c4; color: #f57f17; }
-.status-満車 { background: #ffe0b2; color: #e65100; }
-.status-締切済 { background: #e0e0e0; color: #616161; }
-
-/* ステータスドロップダウン */
-.status-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  z-index: 100;
-  overflow: hidden;
-}
-.status-dropdown .option {
-  padding: 10px 16px;
-  cursor: pointer;
-  white-space: nowrap;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-}
-.status-dropdown .option:hover { background: #f0f0f0; }
-
-/* サマリー行 */
-.summary-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 12px 16px;
-  background: #1e3a5f;
-  color: #fff;
-  border-radius: 0 0 8px 8px;
-  font-size: 0.85rem;
-}
-.summary-item { display: flex; gap: 6px; align-items: center; }
-.summary-item .label { opacity: 0.8; }
-.summary-item .value { font-weight: 600; font-size: 1rem; }
-
-/* ==================== 設定タブ ==================== */
-.settings-section {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-.settings-section h3 {
-  font-size: 1rem;
-  color: #1e3a5f;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e8f0fe;
-}
-.day-settings-table {
-  width: 100%;
-  border-collapse: collapse;
-  max-width: 500px;
-}
-.day-settings-table th, .day-settings-table td {
-  padding: 10px 12px;
-  border: 1px solid #e0e0e0;
-  text-align: center;
-}
-.day-settings-table th { background: #f5f8fc; font-weight: 500; }
-.day-settings-table input[type="number"] {
-  width: 70px;
-  padding: 6px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 0.9rem;
-  min-height: 44px;
-}
-.day-settings-table select {
-  padding: 6px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  min-height: 44px;
-}
-.save-btn {
-  padding: 10px 24px;
-  background: #1e3a5f;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin-top: 12px;
-  min-height: 44px;
-}
-.save-btn:hover { background: #2d5986; }
-
-/* 特別日設定 */
-.special-day-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-end;
-  margin-bottom: 16px;
-}
-.special-day-form .field { display: flex; flex-direction: column; gap: 4px; }
-.special-day-form .field label { font-size: 0.8rem; color: #555; }
-.special-day-form .field input, .special-day-form .field select {
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  min-height: 44px;
-}
-.special-days-list {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-}
-.special-days-list th, .special-days-list td {
-  padding: 8px 12px;
-  border: 1px solid #e0e0e0;
-  text-align: center;
-}
-.special-days-list th { background: #f5f8fc; font-weight: 500; }
-.delete-btn-small {
-  padding: 4px 10px;
-  background: #d32f2f;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  min-height: 36px;
-}
-
-/* ==================== データ確認タブ ==================== */
-.export-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.export-controls input[type="date"], .export-controls select {
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  min-height: 44px;
-}
-.export-btn {
-  padding: 8px 20px;
-  background: #2d8a4e;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  min-height: 44px;
-}
-.readonly-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-  min-width: 900px;
-}
-.readonly-table th {
-  background: #455a64;
-  color: #fff;
-  padding: 10px 8px;
-  text-align: center;
-  font-weight: 500;
-  font-size: 0.8rem;
-}
-.readonly-table td {
-  padding: 8px;
-  border: 1px solid #e0e0e0;
-  text-align: right;
-}
-.readonly-table tr:nth-child(even) { background: #f9f9f9; }
-
-.log-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-  margin-top: 16px;
-}
-.log-table th {
-  background: #607d8b;
-  color: #fff;
-  padding: 8px;
-  text-align: center;
-  font-weight: 500;
-}
-.log-table td { padding: 8px; border: 1px solid #e0e0e0; }
-
-/* ==================== トースト ==================== */
-.toast-container {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.toast {
-  padding: 12px 20px;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 0.9rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  animation: slideIn 0.3s ease;
-  max-width: 360px;
-}
-.toast.success { background: #2e7d32; }
-.toast.error { background: #d32f2f; }
-.toast.info { background: #1565c0; }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-/* ==================== ダイアログ ==================== */
-.dialog-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.dialog {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  min-width: 320px;
-  max-width: 90vw;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-}
-.dialog h3 { margin-bottom: 12px; color: #1e3a5f; }
-.dialog p { margin-bottom: 16px; color: #555; }
-.dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
-.dialog-actions button {
-  padding: 8px 20px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  min-height: 44px;
-}
-.dialog-actions .cancel { background: #e0e0e0; color: #333; }
-.dialog-actions .confirm { background: #d32f2f; color: #fff; }
-.dialog-actions .primary { background: #1e3a5f; color: #fff; }
-
-/* ==================== レスポンシブ ==================== */
-@media (max-width: 768px) {
-  html { font-size: 13px; }
-  .controls-bar { padding: 8px 12px; }
-  .tab-btn { padding: 10px 16px; font-size: 0.85rem; }
-  .summary-bar { gap: 10px; font-size: 0.8rem; }
-}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;background:#f0f2f5;color:#1a1a1a;line-height:1.5}
+.app-header{background:linear-gradient(135deg,#1e3a5f,#2d5986);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.app-header h1{font-size:1.2rem;font-weight:600}
+.tab-bar{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;padding:0 16px}
+.tab-btn{padding:12px 24px;border:none;background:none;cursor:pointer;font-size:.95rem;font-weight:500;color:#666;border-bottom:3px solid transparent;transition:all .2s;min-height:44px}
+.tab-btn:hover{color:#1e3a5f;background:#f5f8fc}
+.tab-btn.active{color:#1e3a5f;border-bottom-color:#1e3a5f;font-weight:600}
+.tab-content{display:none;padding:16px}
+.tab-content.active{display:block}
+.controls-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:12px 16px;background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.controls-bar label{font-size:.85rem;color:#555;font-weight:500}
+.controls-bar input[type="date"]{padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-size:.9rem;min-height:44px}
+.quick-btn{padding:6px 14px;border:1px solid #1e3a5f;background:#fff;color:#1e3a5f;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:500;min-height:44px;transition:all .2s}
+.quick-btn:hover{background:#1e3a5f;color:#fff}
+.quick-btn.active-range{background:#1e3a5f;color:#fff}
+.table-wrapper{overflow-x:auto;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.data-table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:1100px}
+.data-table th{background:#2d5986;color:#fff;padding:10px 6px;text-align:center;font-weight:500;font-size:.78rem;white-space:nowrap;position:sticky;top:0;z-index:10}
+.data-table th.highlight-col{background:#c62828!important;font-size:.85rem;font-weight:700}
+.data-table td{padding:0;border:1px solid #e0e0e0;text-align:right;height:40px;min-height:44px;position:relative}
+.data-table tr:hover{background:#f5f8fc}
+.data-table tr.today-row{background:#e8f0fe!important}
+.data-table tr.past-row{background:#f8f8f8}
+.data-table tr.past-row:hover{background:#f0f0f0}
+.cell{width:100%;height:100%;padding:8px 6px;display:flex;align-items:center;justify-content:flex-end;cursor:default;outline:none;min-height:40px;user-select:none}
+.cell.text-left{justify-content:flex-start}
+.cell.text-center{justify-content:center}
+.cell.editable{cursor:cell}
+.cell.focused{outline:2px solid #1a73e8;outline-offset:-2px;background:#e8f0fe}
+.cell.editing{padding:0}
+.cell.readonly{background:#f5f5f5;color:#666}
+.cell.calc-col{background:#fff8e1;font-weight:500}
+.cell.highlight-cell{background:#fff0f0!important;font-weight:700;font-size:1rem;color:#c62828}
+.cell.saving{opacity:.6}
+.cell.error{outline:2px solid #d32f2f!important;outline-offset:-2px}
+.cell-input{width:100%;height:100%;border:none;outline:none;padding:8px 6px;font-size:.85rem;text-align:right;background:#fff;font-family:inherit}
+.cell-input.text-left{text-align:left}
+.status-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.status-受付中{background:#c8e6c9;color:#2e7d32}
+.status-注意{background:#fff9c4;color:#f57f17}
+.status-満車{background:#ffe0b2;color:#e65100}
+.status-締切済{background:#e0e0e0;color:#616161}
+.status-dropdown{position:absolute;top:100%;left:0;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;overflow:hidden}
+.status-dropdown .option{padding:10px 16px;cursor:pointer;white-space:nowrap;min-height:44px;display:flex;align-items:center}
+.status-dropdown .option:hover{background:#f0f0f0}
+.summary-bar{display:flex;flex-wrap:wrap;gap:16px;padding:12px 16px;background:#1e3a5f;color:#fff;border-radius:0 0 8px 8px;font-size:.85rem}
+.summary-item{display:flex;gap:6px;align-items:center}
+.summary-item .label{opacity:.8}
+.summary-item .value{font-weight:600;font-size:1rem}
+.summary-item.highlight .value{color:#ffcdd2;font-size:1.15rem;font-weight:700}
+.settings-section{background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.settings-section h3{font-size:1rem;color:#1e3a5f;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #e8f0fe}
+.day-settings-table{width:100%;border-collapse:collapse;max-width:500px}
+.day-settings-table th,.day-settings-table td{padding:10px 12px;border:1px solid #e0e0e0;text-align:center}
+.day-settings-table th{background:#f5f8fc;font-weight:500}
+.day-settings-table input[type="number"]{width:70px;padding:6px;border:1px solid #ccc;border-radius:4px;text-align:center;font-size:.9rem;min-height:44px}
+.day-settings-table select{padding:6px;border:1px solid #ccc;border-radius:4px;font-size:.9rem;min-height:44px}
+.save-btn{padding:10px 24px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.9rem;font-weight:500;margin-top:12px;min-height:44px}
+.save-btn:hover{background:#2d5986}
+.special-day-form{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:16px}
+.special-day-form .field{display:flex;flex-direction:column;gap:4px}
+.special-day-form .field label{font-size:.8rem;color:#555}
+.special-day-form .field input,.special-day-form .field select,.special-day-form .field textarea{padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:.9rem;min-height:44px}
+.special-days-list,.holiday-list{width:100%;border-collapse:collapse;margin-top:12px}
+.special-days-list th,.special-days-list td,.holiday-list th,.holiday-list td{padding:8px 12px;border:1px solid #e0e0e0;text-align:center}
+.special-days-list th,.holiday-list th{background:#f5f8fc;font-weight:500}
+.delete-btn-small{padding:4px 10px;background:#d32f2f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.8rem;min-height:36px}
+.export-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+.export-controls input[type="date"],.export-controls select{padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-size:.9rem;min-height:44px}
+.export-btn{padding:8px 20px;background:#2d8a4e;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.9rem;min-height:44px}
+.readonly-table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:900px}
+.readonly-table th{background:#455a64;color:#fff;padding:10px 8px;text-align:center;font-weight:500;font-size:.8rem}
+.readonly-table td{padding:8px;border:1px solid #e0e0e0;text-align:right}
+.readonly-table tr:nth-child(even){background:#f9f9f9}
+.log-table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:16px}
+.log-table th{background:#607d8b;color:#fff;padding:8px;text-align:center;font-weight:500}
+.log-table td{padding:8px;border:1px solid #e0e0e0}
+.analysis-section{background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.analysis-section h3{font-size:1rem;color:#1e3a5f;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #e8f0fe}
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:#f5f8fc;border-radius:8px;padding:16px;text-align:center;border-left:4px solid #1e3a5f}
+.stat-card.red{border-left-color:#c62828}
+.stat-card .stat-label{font-size:.8rem;color:#666;margin-bottom:4px}
+.stat-card .stat-value{font-size:1.4rem;font-weight:700;color:#1e3a5f}
+.stat-card.red .stat-value{color:#c62828}
+.comparison-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:.9rem}
+.comparison-table th{background:#37474f;color:#fff;padding:10px 12px;text-align:center}
+.comparison-table td{padding:10px 12px;border:1px solid #e0e0e0;text-align:right}
+.comparison-table tr:nth-child(even){background:#f9f9f9}
+.regression-result{background:#f5f5f5;border-radius:8px;padding:16px;margin-top:16px;font-family:monospace;font-size:.85rem;line-height:1.8;white-space:pre-wrap}
+.prediction-form{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:16px;padding:16px;background:#e8f0fe;border-radius:8px}
+.prediction-form .field{display:flex;flex-direction:column;gap:4px}
+.prediction-form .field label{font-size:.8rem;color:#555}
+.prediction-form .field input,.prediction-form .field select{padding:6px 10px;border:1px solid #ccc;border-radius:4px;min-height:44px}
+.prediction-result{margin-top:12px;padding:16px;background:#c8e6c9;border-radius:8px;font-size:1rem;font-weight:600}
+.import-area{width:100%;min-height:120px;border:2px dashed #ccc;border-radius:8px;padding:12px;font-size:.85rem;font-family:monospace;resize:vertical}
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 20px;border-radius:8px;color:#fff;font-size:.9rem;box-shadow:0 4px 12px rgba(0,0,0,.2);animation:slideIn .3s ease;max-width:360px}
+.toast.success{background:#2e7d32}
+.toast.error{background:#d32f2f}
+.toast.info{background:#1565c0}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.dialog-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000}
+.dialog{background:#fff;border-radius:12px;padding:24px;min-width:320px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.dialog h3{margin-bottom:12px;color:#1e3a5f}
+.dialog p{margin-bottom:16px;color:#555}
+.dialog-actions{display:flex;gap:8px;justify-content:flex-end}
+.dialog-actions button{padding:8px 20px;border:none;border-radius:6px;cursor:pointer;font-size:.9rem;min-height:44px}
+.dialog-actions .cancel{background:#e0e0e0;color:#333}
+.dialog-actions .confirm{background:#d32f2f;color:#fff}
+.dialog-actions .primary{background:#1e3a5f;color:#fff}
+.unit-label{font-size:.7rem;color:#999;margin-left:2px}
+@media(max-width:768px){html{font-size:13px}.controls-bar{padding:8px 12px}.tab-btn{padding:10px 14px;font-size:.85rem}.summary-bar{gap:10px;font-size:.8rem}}
 </style>
 </head>
 <body>
-
-<!-- ヘッダー -->
 <div class="app-header">
   <h1>家具配送センター 満車管理</h1>
-  <span id="currentDateTime" style="font-size:0.8rem;opacity:0.8;"></span>
+  <span id="currentDateTime" style="font-size:.8rem;opacity:.8"></span>
 </div>
-
-<!-- タブバー -->
 <div class="tab-bar">
   <button class="tab-btn active" data-tab="main">満車管理表</button>
   <button class="tab-btn" data-tab="settings">設定</button>
   <button class="tab-btn" data-tab="data">データ確認</button>
+  <button class="tab-btn" data-tab="analysis">分析</button>
 </div>
 
-<!-- ==================== タブ1: 満車管理表 ==================== -->
+<!-- タブ1: 満車管理表 -->
 <div id="tab-main" class="tab-content active">
   <div class="controls-bar">
-    <label>開始日</label>
+    <button class="quick-btn active-range" onclick="loadNext30()">配送日30日表示</button>
+    <span style="color:#999">|</span>
+    <label>期間指定:</label>
     <input type="date" id="startDate">
     <label>〜</label>
     <input type="date" id="endDate">
-    <button class="quick-btn" onclick="setQuickRange('thisWeek')">今週</button>
-    <button class="quick-btn" onclick="setQuickRange('nextWeek')">来週</button>
-    <button class="quick-btn" onclick="setQuickRange('thisMonth')">今月</button>
-    <button class="quick-btn" onclick="loadData()">表示</button>
-    <button class="add-row-btn" onclick="showAddRowDialog()">＋ 配送日を追加</button>
+    <button class="quick-btn" onclick="loadByRange()">表示</button>
   </div>
-
   <div class="table-wrapper">
     <table class="data-table" id="mainTable">
-      <thead>
-        <tr>
-          <th style="min-width:90px">配送日</th>
-          <th style="min-width:40px">曜日</th>
-          <th style="min-width:55px">台数</th>
-          <th style="min-width:75px">ステータス</th>
-          <th style="min-width:75px">昨日まで<br>件数</th>
-          <th style="min-width:90px">昨日まで<br>金額</th>
-          <th style="min-width:65px">当日<br>件数</th>
-          <th style="min-width:85px">当日<br>金額</th>
-          <th style="min-width:75px">合計<br>件数</th>
-          <th style="min-width:90px">合計<br>金額</th>
-          <th style="min-width:80px">1台あたり<br>件数</th>
-          <th style="min-width:90px">1台あたり<br>金額</th>
-          <th style="min-width:100px">備考</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th style="min-width:90px">配送日</th>
+        <th style="min-width:36px">曜日</th>
+        <th style="min-width:50px">台数</th>
+        <th style="min-width:72px">ステータス</th>
+        <th style="min-width:65px">昨日まで<br>件数</th>
+        <th style="min-width:75px">昨日まで<br>金額<span class="unit-label">千円</span></th>
+        <th style="min-width:60px">当日<br>件数</th>
+        <th style="min-width:70px">当日<br>金額<span class="unit-label">千円</span></th>
+        <th style="min-width:65px">合計<br>件数</th>
+        <th style="min-width:80px">合計<br>金額<span class="unit-label">千円</span></th>
+        <th class="highlight-col" style="min-width:80px">1台あたり<br>件数</th>
+        <th class="highlight-col" style="min-width:90px">1台あたり<br>金額<span class="unit-label">千円</span></th>
+        <th style="min-width:100px">備考</th>
+      </tr></thead>
       <tbody id="mainTableBody"></tbody>
     </table>
   </div>
-
   <div class="summary-bar" id="summaryBar">
     <div class="summary-item"><span class="label">合計件数:</span><span class="value" id="sumTotalCount">-</span></div>
-    <div class="summary-item"><span class="label">合計金額:</span><span class="value" id="sumTotalAmount">-</span></div>
-    <div class="summary-item"><span class="label">平均台数:</span><span class="value" id="avgTrucks">-</span></div>
-    <div class="summary-item"><span class="label">平均1台件数:</span><span class="value" id="avgPerTruckCount">-</span></div>
-    <div class="summary-item"><span class="label">平均1台金額:</span><span class="value" id="avgPerTruckAmount">-</span></div>
+    <div class="summary-item"><span class="label">合計金額:</span><span class="value" id="sumTotalAmount">-</span><span class="unit-label" style="color:#ccc">千円</span></div>
+    <div class="summary-item highlight"><span class="label">平均1台件数:</span><span class="value" id="avgPerTruckCount">-</span></div>
+    <div class="summary-item highlight"><span class="label">平均1台金額:</span><span class="value" id="avgPerTruckAmount">-</span><span class="unit-label" style="color:#ccc">千円</span></div>
   </div>
 </div>
 
-<!-- ==================== タブ2: 設定 ==================== -->
+<!-- タブ2: 設定 -->
 <div id="tab-settings" class="tab-content">
-  <!-- 曜日別台数設定 -->
   <div class="settings-section">
     <h3>曜日別台数設定</h3>
     <table class="day-settings-table">
@@ -533,30 +183,17 @@ body {
     </table>
     <button class="save-btn" onclick="saveDaySettingsUI()">保存</button>
   </div>
-
-  <!-- 特別日設定 -->
   <div class="settings-section">
-    <h3>特別日設定</h3>
+    <h3>特別日・連休設定</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:12px">連休は開始日と終了日を両方指定してください。1日だけの場合は開始日のみでOK。</p>
     <div class="special-day-form">
-      <div class="field">
-        <label>日付</label>
-        <input type="date" id="specialDate">
+      <div class="field"><label>開始日</label><input type="date" id="specialDate"></div>
+      <div class="field"><label>終了日（連休時）</label><input type="date" id="specialEndDate"></div>
+      <div class="field"><label>台数</label><input type="number" id="specialTrucks" value="0" min="0" style="width:70px"></div>
+      <div class="field"><label>種別</label>
+        <select id="specialType"><option value="追加日">追加日</option><option value="休業日">休業日</option></select>
       </div>
-      <div class="field">
-        <label>台数</label>
-        <input type="number" id="specialTrucks" value="0" min="0" style="width:70px">
-      </div>
-      <div class="field">
-        <label>種別</label>
-        <select id="specialType">
-          <option value="追加日">追加日</option>
-          <option value="休業日">休業日</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>メモ</label>
-        <input type="text" id="specialMemo" placeholder="メモ" style="width:160px">
-      </div>
+      <div class="field"><label>メモ</label><input type="text" id="specialMemo" placeholder="例: GW休業" style="width:160px"></div>
       <button class="save-btn" onclick="saveSpecialDayUI()" style="margin-top:0">追加</button>
     </div>
     <div class="table-wrapper">
@@ -566,36 +203,53 @@ body {
       </table>
     </div>
   </div>
+  <div class="settings-section">
+    <h3>祝日・販促期間登録</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:12px">祝日や販促期間を登録すると、分析タブで曜日区分別の傾向比較や予測に使われます。</p>
+    <div class="special-day-form">
+      <div class="field"><label>開始日</label><input type="date" id="holidayDate"></div>
+      <div class="field"><label>終了日</label><input type="date" id="holidayEndDate"></div>
+      <div class="field"><label>種別</label>
+        <select id="holidayType"><option value="祝日">祝日</option><option value="販促期間">販促期間</option></select>
+      </div>
+      <div class="field"><label>名称</label><input type="text" id="holidayName" placeholder="例: 海の日" style="width:160px"></div>
+      <div class="field"><label>メモ</label><input type="text" id="holidayMemo" placeholder="" style="width:120px"></div>
+      <button class="save-btn" onclick="saveHolidayUI()" style="margin-top:0">追加</button>
+    </div>
+    <h4 style="margin:16px 0 8px;font-size:.9rem">一括インポート（Excel/CSVから貼り付け）</h4>
+    <p style="font-size:.8rem;color:#888;margin-bottom:8px">形式: 日付,終了日,種別(祝日/販促期間),名称,メモ （1行1件、カンマ区切り）</p>
+    <textarea class="import-area" id="importArea" placeholder="2026-01-01,,祝日,元日,&#10;2026-05-03,2026-05-05,祝日,GW,連休&#10;2026-03-01,2026-03-31,販促期間,新生活フェア,"></textarea>
+    <button class="save-btn" onclick="importHolidaysUI()" style="margin-top:8px">一括インポート</button>
+    <div class="table-wrapper" style="margin-top:16px">
+      <table class="holiday-list">
+        <thead><tr><th>開始日</th><th>終了日</th><th>種別</th><th>名称</th><th>メモ</th><th>操作</th></tr></thead>
+        <tbody id="holidayBody"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
-<!-- ==================== タブ3: データ確認 ==================== -->
+<!-- タブ3: データ確認 -->
 <div id="tab-data" class="tab-content">
   <div class="settings-section">
     <h3>過去データ閲覧・エクスポート</h3>
     <div class="export-controls">
-      <label>開始日</label>
-      <input type="date" id="exportStartDate">
-      <label>〜</label>
-      <input type="date" id="exportEndDate">
+      <label>開始日</label><input type="date" id="exportStartDate">
+      <label>〜</label><input type="date" id="exportEndDate">
       <button class="quick-btn" onclick="loadExportData()">表示</button>
       <button class="export-btn" onclick="doExportCSV()">CSVエクスポート</button>
     </div>
     <div class="table-wrapper">
       <table class="readonly-table">
-        <thead>
-          <tr>
-            <th>配送日</th><th>曜日</th><th>台数</th><th>ステータス</th>
-            <th>合計件数</th><th>合計金額</th>
-            <th>1台件数</th><th>1台金額</th>
-            <th>昨日件数</th><th>昨日金額</th>
-            <th>当日件数</th><th>当日金額</th><th>備考</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th>配送日</th><th>曜日</th><th>台数</th><th>ステータス</th>
+          <th>合計件数</th><th>合計金額</th><th>1台件数</th><th>1台金額</th>
+          <th>昨日件数</th><th>昨日金額</th><th>当日件数</th><th>当日金額</th><th>備考</th>
+        </tr></thead>
         <tbody id="exportTableBody"></tbody>
       </table>
     </div>
   </div>
-
   <div class="settings-section">
     <h3>変更ログ</h3>
     <div class="table-wrapper">
@@ -607,979 +261,664 @@ body {
   </div>
 </div>
 
-<!-- トースト -->
+<!-- タブ4: 分析 -->
+<div id="tab-analysis" class="tab-content">
+  <div class="analysis-section">
+    <h3>分析期間</h3>
+    <div class="export-controls">
+      <label>開始日</label><input type="date" id="analysisStartDate">
+      <label>〜</label><input type="date" id="analysisEndDate">
+      <button class="quick-btn" onclick="runAnalysis()">分析実行</button>
+    </div>
+  </div>
+  <div class="analysis-section" id="analysisSummarySection" style="display:none">
+    <h3>概要サマリー</h3>
+    <div class="stat-cards" id="statCards"></div>
+  </div>
+  <div class="analysis-section" id="comparisonSection" style="display:none">
+    <h3>曜日区分別 契約傾向比較</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:12px">平日・土日・祝日・販促期間ごとの平均比較</p>
+    <div class="table-wrapper"><table class="comparison-table" id="comparisonTable">
+      <thead><tr><th>区分</th><th>日数</th><th>平均件数</th><th>平均金額(千円)</th><th>平均1台件数</th><th>平均1台金額(千円)</th><th>件数/金額 比率</th></tr></thead>
+      <tbody id="comparisonBody"></tbody>
+    </table></div>
+  </div>
+  <div class="analysis-section" id="regressionSection" style="display:none">
+    <h3>重回帰分析 結果</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:8px">目的変数: 1台あたり件数 / 説明変数: 台数, 土日フラグ, 祝日フラグ, 販促期間フラグ</p>
+    <div class="regression-result" id="regressionResult"></div>
+    <h4 style="margin-top:20px;font-size:.95rem">予測シミュレーション</h4>
+    <div class="prediction-form">
+      <div class="field"><label>台数</label><input type="number" id="predTrucks" value="3" min="1"></div>
+      <div class="field"><label>曜日区分</label>
+        <select id="predDayType"><option value="平日">平日</option><option value="土日">土日</option><option value="祝日">祝日</option></select>
+      </div>
+      <div class="field"><label>販促期間</label>
+        <select id="predPromo"><option value="0">なし</option><option value="1">あり</option></select>
+      </div>
+      <button class="save-btn" onclick="runPrediction()" style="margin-top:0">予測</button>
+    </div>
+    <div class="prediction-result" id="predictionResult" style="display:none"></div>
+  </div>
+  <div class="analysis-section" id="regressionAmountSection" style="display:none">
+    <h3>重回帰分析 結果（金額）</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:8px">目的変数: 1台あたり金額(千円) / 説明変数: 台数, 土日フラグ, 祝日フラグ, 販促期間フラグ</p>
+    <div class="regression-result" id="regressionAmountResult"></div>
+  </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
 // ==================== グローバル状態 ====================
 var tableData = [];
-var focusedCell = { row: -1, col: -1 };
+var focusedCell = {row:-1,col:-1};
 var editingCell = null;
 var undoStack = [];
 var redoStack = [];
 var MAX_UNDO = 30;
 var statusDropdown = null;
+var regressionModel = null; // 件数モデル
+var regressionAmountModel = null; // 金額モデル
 
-var EDITABLE_COLS = [2, 3, 4, 5, 6, 7, 12]; // trucks, status, yesterdayCount, yesterdayAmount, todayCount, todayAmount, memo
-var COL_KEYS = [
-  'date', 'dayName', 'trucks', 'status',
-  'yesterdayCount', 'yesterdayAmount', 'todayCount', 'todayAmount',
-  'totalCount', 'totalAmount', 'perTruckCount', 'perTruckAmount',
-  'memo'
-];
-var COL_SAVE_KEYS = {
-  2: 'trucks', 3: 'status',
-  4: 'yesterdayCount', 5: 'yesterdayAmount',
-  6: 'todayCount', 7: 'todayAmount',
-  12: 'memo'
-};
-var NUMERIC_COLS = [2, 4, 5, 6, 7];
-var CALC_COLS = [8, 9, 10, 11]; // totalCount, totalAmount, perTruckCount, perTruckAmount
+// 列定義 (表示順)
+// 0:date, 1:dayName, 2:trucks, 3:status,
+// 4:yesterdayCount, 5:yesterdayAmount, 6:todayCount, 7:todayAmount,
+// 8:totalCount, 9:totalAmount, 10:perTruckCount, 11:perTruckAmount,
+// 12:memo
+var EDITABLE_COLS = [2,3,4,5,6,7,12];
+var COL_KEYS = ['date','dayName','trucks','status','yesterdayCount','yesterdayAmount','todayCount','todayAmount','totalCount','totalAmount','perTruckCount','perTruckAmount','memo'];
+var COL_SAVE_KEYS = {2:'trucks',3:'status',4:'yesterdayCount',5:'yesterdayAmount',6:'todayCount',7:'todayAmount',12:'memo'};
+var NUMERIC_COLS = [2,4,5,6,7];
+var CALC_COLS = [8,9,10,11];
+var HIGHLIGHT_COLS = [10,11]; // 1台あたり件数・金額 を目立たせる
 var NUM_COLS = 13;
 
 // ==================== 初期化 ====================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function(){
   updateDateTime();
-  setInterval(updateDateTime, 60000);
+  setInterval(updateDateTime,60000);
   initTabs();
-  setQuickRange('thisWeek');
-  loadData();
-
-  // デフォルトのエクスポート期間（今月）
+  loadNext30();
   var now = new Date();
-  document.getElementById('exportStartDate').value = formatDate(new Date(now.getFullYear(), now.getMonth(), 1));
-  document.getElementById('exportEndDate').value = formatDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  document.getElementById('exportStartDate').value = fmtDate(new Date(now.getFullYear(),now.getMonth(),1));
+  document.getElementById('exportEndDate').value = fmtDate(new Date(now.getFullYear(),now.getMonth()+1,0));
+  // 分析デフォルト: 過去3ヶ月
+  document.getElementById('analysisStartDate').value = fmtDate(new Date(now.getFullYear(),now.getMonth()-3,1));
+  document.getElementById('analysisEndDate').value = fmtDate(now);
 });
 
-function updateDateTime() {
-  var now = new Date();
-  var days = ['日','月','火','水','木','金','土'];
-  document.getElementById('currentDateTime').textContent =
-    now.getFullYear() + '/' + (now.getMonth()+1) + '/' + now.getDate() + '(' + days[now.getDay()] + ') ' +
-    ('0'+now.getHours()).slice(-2) + ':' + ('0'+now.getMinutes()).slice(-2);
+function updateDateTime(){
+  var now=new Date();var days=['日','月','火','水','木','金','土'];
+  document.getElementById('currentDateTime').textContent=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+'('+days[now.getDay()]+') '+('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
 }
 
-// ==================== タブ切り替え ====================
-function initTabs() {
-  document.querySelectorAll('.tab-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+// ==================== タブ ====================
+function initTabs(){
+  document.querySelectorAll('.tab-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});
+      document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active')});
       btn.classList.add('active');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-
-      if (btn.dataset.tab === 'settings') {
-        loadDaySettings();
-        loadSpecialDays();
-      } else if (btn.dataset.tab === 'data') {
-        loadExportData();
-        loadChangeLog();
-      }
+      document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+      if(btn.dataset.tab==='settings'){loadDaySettings();loadSpecialDays();loadHolidays();}
+      else if(btn.dataset.tab==='data'){loadExportData();loadChangeLog();}
     });
   });
 }
 
 // ==================== 日付ユーティリティ ====================
-function formatDate(d) {
-  var y = d.getFullYear();
-  var m = ('0' + (d.getMonth() + 1)).slice(-2);
-  var day = ('0' + d.getDate()).slice(-2);
-  return y + '-' + m + '-' + day;
-}
-
-function todayStr() { return formatDate(new Date()); }
-
-function getMonday(d) {
-  var date = new Date(d);
-  var day = date.getDay();
-  var diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(date.setDate(diff));
-}
-
-function setQuickRange(type) {
-  var now = new Date();
-  var start, end;
-  if (type === 'thisWeek') {
-    start = getMonday(now);
-    end = new Date(start);
-    end.setDate(end.getDate() + 6);
-  } else if (type === 'nextWeek') {
-    start = getMonday(now);
-    start.setDate(start.getDate() + 7);
-    end = new Date(start);
-    end.setDate(end.getDate() + 6);
-  } else if (type === 'thisMonth') {
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
-    end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  }
-  document.getElementById('startDate').value = formatDate(start);
-  document.getElementById('endDate').value = formatDate(end);
-}
-
-function formatNumber(n) {
-  if (n === null || n === undefined || n === '') return '';
-  return Number(n).toLocaleString('ja-JP');
-}
+function fmtDate(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
+function todayStr(){return fmtDate(new Date())}
+function fmtNum(n){if(n===null||n===undefined||n==='')return '';return Number(n).toLocaleString('ja-JP')}
 
 // ==================== データ読み込み ====================
-function loadData() {
-  var startDate = document.getElementById('startDate').value;
-  var endDate = document.getElementById('endDate').value;
-  if (!startDate || !endDate) {
-    showToast('日付範囲を指定してください', 'error');
-    return;
-  }
-
+function loadNext30(){
   google.script.run
-    .withSuccessHandler(function(data) {
-      tableData = data || [];
-      renderTable();
-      updateSummary();
-    })
-    .withFailureHandler(function(err) {
-      showToast('データ取得エラー: ' + err.message, 'error');
-    })
-    .getRows(startDate, endDate);
+    .withSuccessHandler(function(data){tableData=data||[];renderTable();updateSummary();})
+    .withFailureHandler(function(e){showToast('データ取得エラー: '+e.message,'error')})
+    .getNext30DeliveryDays();
+}
+function loadByRange(){
+  var s=document.getElementById('startDate').value,e=document.getElementById('endDate').value;
+  if(!s||!e){showToast('日付範囲を指定してください','error');return}
+  google.script.run
+    .withSuccessHandler(function(data){tableData=data||[];renderTable();updateSummary()})
+    .withFailureHandler(function(e){showToast('データ取得エラー: '+e.message,'error')})
+    .getRows(s,e);
 }
 
 // ==================== テーブル描画 ====================
-function renderTable() {
-  var tbody = document.getElementById('mainTableBody');
-  tbody.innerHTML = '';
-  var today = todayStr();
-
-  tableData.forEach(function(row, ri) {
-    var tr = document.createElement('tr');
-    if (row.date === today) tr.className = 'today-row';
-    else if (row.date < today) tr.className = 'past-row';
-
-    // 列の順序: date, dayName, trucks, status, yesterdayCount, yesterdayAmount, todayCount, todayAmount, totalCount, totalAmount, perTruckCount, perTruckAmount, memo
-    var cellValues = [
-      row.date, row.dayName, row.trucks, row.status,
-      row.yesterdayCount, row.yesterdayAmount,
-      row.todayCount, row.todayAmount,
-      row.totalCount, row.totalAmount,
-      row.perTruckCount, row.perTruckAmount,
-      row.memo
-    ];
-
-    for (var ci = 0; ci < NUM_COLS; ci++) {
-      var td = document.createElement('td');
-      var cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.dataset.row = ri;
-      cell.dataset.col = ci;
-      cell.setAttribute('tabindex', '-1');
-
-      var isEditable = EDITABLE_COLS.indexOf(ci) !== -1;
-      var isCalc = CALC_COLS.indexOf(ci) !== -1;
-
-      if (isEditable) {
-        cell.classList.add('editable');
-      } else {
-        cell.classList.add('readonly');
-      }
-
-      if (isCalc) {
-        cell.classList.add('calc-col');
-      }
-
-      // テキスト配置
-      if (ci === 0 || ci === 12) cell.classList.add('text-left');
-      else if (ci === 1 || ci === 3) cell.classList.add('text-center');
-
-      // 値を表示
-      var val = cellValues[ci];
-      if (ci === 3) {
-        // ステータスはバッジ表示
-        cell.innerHTML = '<span class="status-badge status-' + val + '">' + val + '</span>';
-      } else if (NUMERIC_COLS.indexOf(ci) !== -1 || CALC_COLS.indexOf(ci) !== -1) {
-        cell.textContent = formatNumber(val);
-      } else {
-        cell.textContent = val || '';
-      }
-
-      // イベント
-      cell.addEventListener('mousedown', onCellMouseDown);
-      cell.addEventListener('dblclick', onCellDblClick);
-
-      td.appendChild(cell);
-      tr.appendChild(td);
+function renderTable(){
+  var tbody=document.getElementById('mainTableBody');
+  tbody.innerHTML='';
+  var today=todayStr();
+  tableData.forEach(function(row,ri){
+    var tr=document.createElement('tr');
+    if(row.date===today)tr.className='today-row';
+    else if(row.date<today)tr.className='past-row';
+    var vals=[row.date,row.dayName,row.trucks,row.status,row.yesterdayCount,row.yesterdayAmount,row.todayCount,row.todayAmount,row.totalCount,row.totalAmount,row.perTruckCount,row.perTruckAmount,row.memo];
+    for(var ci=0;ci<NUM_COLS;ci++){
+      var td=document.createElement('td');
+      var cell=document.createElement('div');
+      cell.className='cell';
+      cell.dataset.row=ri;cell.dataset.col=ci;
+      cell.setAttribute('tabindex','-1');
+      var isEdit=EDITABLE_COLS.indexOf(ci)!==-1;
+      var isCalc=CALC_COLS.indexOf(ci)!==-1;
+      var isHL=HIGHLIGHT_COLS.indexOf(ci)!==-1;
+      if(isEdit)cell.classList.add('editable');else cell.classList.add('readonly');
+      if(isCalc&&!isHL)cell.classList.add('calc-col');
+      if(isHL)cell.classList.add('highlight-cell');
+      if(ci===0||ci===12)cell.classList.add('text-left');
+      else if(ci===1||ci===3)cell.classList.add('text-center');
+      var val=vals[ci];
+      if(ci===3){cell.innerHTML='<span class="status-badge status-'+val+'">'+val+'</span>'}
+      else if(NUMERIC_COLS.indexOf(ci)!==-1||CALC_COLS.indexOf(ci)!==-1){cell.textContent=fmtNum(val)}
+      else{cell.textContent=val||''}
+      cell.addEventListener('mousedown',onCellMouseDown);
+      cell.addEventListener('dblclick',onCellDblClick);
+      td.appendChild(cell);tr.appendChild(td);
     }
-
     tbody.appendChild(tr);
   });
-
-  focusedCell = { row: -1, col: -1 };
+  focusedCell={row:-1,col:-1};
 }
 
 // ==================== セル操作 ====================
-function getCellEl(row, col) {
-  return document.querySelector('.cell[data-row="' + row + '"][data-col="' + col + '"]');
+function getCellEl(r,c){return document.querySelector('.cell[data-row="'+r+'"][data-col="'+c+'"]')}
+function onCellMouseDown(e){
+  var cell=e.currentTarget,r=+cell.dataset.row,c=+cell.dataset.col;
+  if(editingCell&&(editingCell.row!==r||editingCell.col!==c))commitEdit();
+  closeStatusDropdown();setFocus(r,c);
 }
-
-function onCellMouseDown(e) {
-  var cell = e.currentTarget;
-  var row = parseInt(cell.dataset.row);
-  var col = parseInt(cell.dataset.col);
-
-  if (editingCell && (editingCell.row !== row || editingCell.col !== col)) {
-    commitEdit();
-  }
-  closeStatusDropdown();
-  setFocus(row, col);
+function onCellDblClick(e){
+  var cell=e.currentTarget,r=+cell.dataset.row,c=+cell.dataset.col;
+  if(EDITABLE_COLS.indexOf(c)!==-1){if(c===3)showStatusDropdown(r,c);else startEdit(r,c,false)}
 }
-
-function onCellDblClick(e) {
-  var cell = e.currentTarget;
-  var row = parseInt(cell.dataset.row);
-  var col = parseInt(cell.dataset.col);
-  if (EDITABLE_COLS.indexOf(col) !== -1) {
-    if (col === 3) {
-      showStatusDropdown(row, col);
-    } else {
-      startEdit(row, col, false);
-    }
-  }
+function setFocus(r,c){
+  document.querySelectorAll('.cell.focused').forEach(function(x){x.classList.remove('focused')});
+  focusedCell={row:r,col:c};
+  var cell=getCellEl(r,c);if(cell){cell.classList.add('focused');cell.focus()}
 }
-
-function setFocus(row, col) {
-  // 既存フォーカスを解除
-  document.querySelectorAll('.cell.focused').forEach(function(c) { c.classList.remove('focused'); });
-
-  focusedCell = { row: row, col: col };
-  var cell = getCellEl(row, col);
-  if (cell) {
-    cell.classList.add('focused');
-    cell.focus();
-  }
-}
-
-function startEdit(row, col, overwrite) {
-  if (EDITABLE_COLS.indexOf(col) === -1) return;
-  if (col === 3) { showStatusDropdown(row, col); return; }
-
-  var cell = getCellEl(row, col);
-  if (!cell) return;
-
-  var key = COL_KEYS[col];
-  var currentVal = tableData[row][key];
-  if (currentVal === null || currentVal === undefined) currentVal = '';
-
-  editingCell = { row: row, col: col, originalValue: currentVal };
+function startEdit(r,c,overwrite){
+  if(EDITABLE_COLS.indexOf(c)===-1)return;
+  if(c===3){showStatusDropdown(r,c);return}
+  var cell=getCellEl(r,c);if(!cell)return;
+  var key=COL_KEYS[c],cur=tableData[r][key];if(cur==null)cur='';
+  editingCell={row:r,col:c,originalValue:cur};
   cell.classList.add('editing');
-
-  var input = document.createElement('input');
-  input.className = 'cell-input';
-  if (col === 12) input.classList.add('text-left');
-  input.type = (NUMERIC_COLS.indexOf(col) !== -1) ? 'number' : 'text';
-  input.value = overwrite ? '' : String(currentVal);
-
-  input.addEventListener('keydown', onEditKeyDown);
-  input.addEventListener('blur', function() {
-    // 小さな遅延でblur時コミット（タブ移動対応）
-    setTimeout(function() { if (editingCell) commitEdit(); }, 50);
-  });
-
-  cell.innerHTML = '';
-  cell.appendChild(input);
-  input.focus();
-  if (!overwrite) input.select();
+  var inp=document.createElement('input');
+  inp.className='cell-input';
+  if(c===12)inp.classList.add('text-left');
+  inp.type=(NUMERIC_COLS.indexOf(c)!==-1)?'number':'text';
+  inp.value=overwrite?'':String(cur);
+  inp.addEventListener('keydown',onEditKeyDown);
+  inp.addEventListener('blur',function(){setTimeout(function(){if(editingCell)commitEdit()},50)});
+  cell.innerHTML='';cell.appendChild(inp);inp.focus();
+  if(!overwrite)inp.select();
 }
-
-function commitEdit() {
-  if (!editingCell) return;
-  var row = editingCell.row;
-  var col = editingCell.col;
-  var originalValue = editingCell.originalValue;
-
-  var cell = getCellEl(row, col);
-  if (!cell) { editingCell = null; return; }
-
-  var input = cell.querySelector('input');
-  var newValue = input ? input.value : String(originalValue);
-  editingCell = null;
-  cell.classList.remove('editing');
-
-  var key = COL_KEYS[col];
-
-  // 数値変換
-  if (NUMERIC_COLS.indexOf(col) !== -1) {
-    newValue = Number(newValue) || 0;
-  }
-
-  // 変更がなければ再描画だけ
-  if (String(newValue) === String(originalValue)) {
-    refreshCellDisplay(row, col);
-    return;
-  }
-
-  // Undo記録
-  pushUndo(row, key, originalValue, newValue);
-
-  // ローカル更新
-  tableData[row][key] = newValue;
-  recalcLocal(row);
-  refreshRow(row);
-
-  // サーバー保存
-  var saveKey = COL_SAVE_KEYS[col];
-  var date = tableData[row].date;
+function commitEdit(nextDir){
+  if(!editingCell)return;
+  var r=editingCell.row,c=editingCell.col,orig=editingCell.originalValue;
+  var cell=getCellEl(r,c);if(!cell){editingCell=null;return}
+  var inp=cell.querySelector('input');
+  var nv=inp?inp.value:String(orig);
+  editingCell=null;cell.classList.remove('editing');
+  var key=COL_KEYS[c];
+  if(NUMERIC_COLS.indexOf(c)!==-1)nv=Number(nv)||0;
+  if(String(nv)===String(orig)){refreshCellDisplay(r,c);return}
+  pushUndo(r,key,orig,nv);
+  tableData[r][key]=nv;recalcLocal(r);refreshRow(r);
+  var saveKey=COL_SAVE_KEYS[c],date=tableData[r].date;
   cell.classList.add('saving');
-
   google.script.run
-    .withSuccessHandler(function(updatedRow) {
-      cell.classList.remove('saving');
-      if (updatedRow) {
-        tableData[row] = updatedRow;
-        refreshRow(row);
-      }
-      updateSummary();
-    })
-    .withFailureHandler(function(err) {
-      cell.classList.remove('saving');
-      cell.classList.add('error');
-      showToast('保存エラー: ' + err.message, 'error');
-      setTimeout(function() { cell.classList.remove('error'); }, 3000);
-    })
-    .saveCell(date, saveKey, newValue);
+    .withSuccessHandler(function(ur){cell.classList.remove('saving');if(ur){tableData[r]=ur;refreshRow(r)}updateSummary()})
+    .withFailureHandler(function(e){cell.classList.remove('saving');cell.classList.add('error');showToast('保存エラー: '+e.message,'error');setTimeout(function(){cell.classList.remove('error')},3000)})
+    .saveCell(date,saveKey,nv);
+}
+function cancelEdit(){
+  if(!editingCell)return;var r=editingCell.row,c=editingCell.col;editingCell=null;
+  var cell=getCellEl(r,c);if(cell){cell.classList.remove('editing');refreshCellDisplay(r,c)}
+}
+function refreshCellDisplay(r,c){
+  var cell=getCellEl(r,c);if(!cell)return;var key=COL_KEYS[c],val=tableData[r][key];
+  if(c===3)cell.innerHTML='<span class="status-badge status-'+val+'">'+val+'</span>';
+  else if(NUMERIC_COLS.indexOf(c)!==-1||CALC_COLS.indexOf(c)!==-1)cell.textContent=fmtNum(val);
+  else cell.textContent=val||'';
+}
+function refreshRow(r){for(var c=0;c<NUM_COLS;c++)refreshCellDisplay(r,c)}
+function recalcLocal(r){
+  var d=tableData[r],t=Number(d.trucks)||0;
+  d.totalCount=(Number(d.yesterdayCount)||0)+(Number(d.todayCount)||0);
+  d.totalAmount=(Number(d.yesterdayAmount)||0)+(Number(d.todayAmount)||0);
+  d.perTruckCount=t>0?Math.round(d.totalCount/t*10)/10:0;
+  d.perTruckAmount=t>0?Math.round(d.totalAmount/t):0;
 }
 
-function cancelEdit() {
-  if (!editingCell) return;
-  var row = editingCell.row;
-  var col = editingCell.col;
-  editingCell = null;
-  var cell = getCellEl(row, col);
-  if (cell) {
-    cell.classList.remove('editing');
-    refreshCellDisplay(row, col);
-  }
-}
-
-function refreshCellDisplay(row, col) {
-  var cell = getCellEl(row, col);
-  if (!cell) return;
-  var key = COL_KEYS[col];
-  var val = tableData[row][key];
-
-  if (col === 3) {
-    cell.innerHTML = '<span class="status-badge status-' + val + '">' + val + '</span>';
-  } else if (NUMERIC_COLS.indexOf(col) !== -1 || CALC_COLS.indexOf(col) !== -1) {
-    cell.textContent = formatNumber(val);
-  } else {
-    cell.textContent = val || '';
-  }
-}
-
-function refreshRow(row) {
-  for (var col = 0; col < NUM_COLS; col++) {
-    refreshCellDisplay(row, col);
-  }
-}
-
-function recalcLocal(row) {
-  var d = tableData[row];
-  var trucks = Number(d.trucks) || 0;
-  d.totalCount = (Number(d.yesterdayCount) || 0) + (Number(d.todayCount) || 0);
-  d.totalAmount = (Number(d.yesterdayAmount) || 0) + (Number(d.todayAmount) || 0);
-  d.perTruckCount = trucks > 0 ? Math.round(d.totalCount / trucks * 10) / 10 : 0;
-  d.perTruckAmount = trucks > 0 ? Math.round(d.totalAmount / trucks) : 0;
-}
-
-// ==================== キーボード操作 ====================
-document.addEventListener('keydown', function(e) {
-  if (editingCell) return; // 編集中はedit用ハンドラが処理
-  if (focusedCell.row < 0) return;
-
-  var row = focusedCell.row;
-  var col = focusedCell.col;
-
-  // Ctrl+Z: Undo
-  if (e.ctrlKey && e.key === 'z') {
-    e.preventDefault();
-    doUndo();
-    return;
-  }
-  // Ctrl+Y: Redo
-  if (e.ctrlKey && e.key === 'y') {
-    e.preventDefault();
-    doRedo();
-    return;
-  }
-
-  // 矢印キー移動
-  if (e.key === 'ArrowUp') { e.preventDefault(); moveFocus(row - 1, col); return; }
-  if (e.key === 'ArrowDown') { e.preventDefault(); moveFocus(row + 1, col); return; }
-  if (e.key === 'ArrowLeft') { e.preventDefault(); moveFocus(row, col - 1); return; }
-  if (e.key === 'ArrowRight') { e.preventDefault(); moveFocus(row, col + 1); return; }
-
-  // Enter: 下へ
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    if (EDITABLE_COLS.indexOf(col) !== -1) {
-      if (col === 3) showStatusDropdown(row, col);
-      else startEdit(row, col, false);
+// ==================== キーボード ====================
+document.addEventListener('keydown',function(e){
+  // 編集中は onEditKeyDown が処理
+  if(editingCell)return;
+  if(focusedCell.row<0)return;
+  var r=focusedCell.row,c=focusedCell.col;
+  if(e.ctrlKey&&e.key==='z'){e.preventDefault();doUndo();return}
+  if(e.ctrlKey&&e.key==='y'){e.preventDefault();doRedo();return}
+  if(e.key==='ArrowUp'){e.preventDefault();moveFocus(r-1,c);return}
+  if(e.key==='ArrowDown'){e.preventDefault();moveFocus(r+1,c);return}
+  if(e.key==='ArrowLeft'){e.preventDefault();moveFocus(r,c-1);return}
+  if(e.key==='ArrowRight'){e.preventDefault();moveFocus(r,c+1);return}
+  if(e.key==='Enter'){e.preventDefault();if(EDITABLE_COLS.indexOf(c)!==-1){if(c===3)showStatusDropdown(r,c);else startEdit(r,c,false)}return}
+  if(e.key==='Tab'){e.preventDefault();if(e.shiftKey)moveFocus(r,c-1);else moveFocus(r,c+1);return}
+  if(e.key==='F2'){e.preventDefault();if(EDITABLE_COLS.indexOf(c)!==-1&&c!==3)startEdit(r,c,false);return}
+  if(e.key==='Delete'){e.preventDefault();if(r>=0&&r<tableData.length)showDeleteRowDialog(r);return}
+  if(e.key===' '&&c===3){e.preventDefault();showStatusDropdown(r,c);return}
+  // 数字即時入力
+  if(EDITABLE_COLS.indexOf(c)!==-1&&c!==3){
+    if(/^[0-9]$/.test(e.key)||e.key==='-'||e.key==='.'){
+      e.preventDefault();startEdit(r,c,true);
+      setTimeout(function(){var cell=getCellEl(r,c);if(cell){var inp=cell.querySelector('input');if(inp)inp.value=e.key}},0);return;
     }
-    return;
-  }
-
-  // Tab: 右へ, Shift+Tab: 左へ
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    if (e.shiftKey) moveFocus(row, col - 1);
-    else moveFocus(row, col + 1);
-    return;
-  }
-
-  // F2: 編集モード（既存値保持）
-  if (e.key === 'F2') {
-    e.preventDefault();
-    if (EDITABLE_COLS.indexOf(col) !== -1 && col !== 3) {
-      startEdit(row, col, false);
-    }
-    return;
-  }
-
-  // Delete: 行削除
-  if (e.key === 'Delete') {
-    e.preventDefault();
-    if (row >= 0 && row < tableData.length) {
-      showDeleteRowDialog(row);
-    }
-    return;
-  }
-
-  // スペース: ステータス操作
-  if (e.key === ' ') {
-    if (col === 3) {
-      e.preventDefault();
-      showStatusDropdown(row, col);
-      return;
-    }
-  }
-
-  // 数字キーで即時入力開始
-  if (EDITABLE_COLS.indexOf(col) !== -1 && col !== 3) {
-    if (/^[0-9]$/.test(e.key) || e.key === '-' || e.key === '.') {
-      e.preventDefault();
-      startEdit(row, col, true);
-      // 入力文字を流し込む
-      setTimeout(function() {
-        var cell = getCellEl(row, col);
-        if (cell) {
-          var input = cell.querySelector('input');
-          if (input) input.value = e.key;
-        }
-      }, 0);
-      return;
-    }
-    // 文字キーで即時入力（備考列）
-    if (col === 12 && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-      e.preventDefault();
-      startEdit(row, col, true);
-      setTimeout(function() {
-        var cell = getCellEl(row, col);
-        if (cell) {
-          var input = cell.querySelector('input');
-          if (input) input.value = e.key;
-        }
-      }, 0);
-      return;
+    if(c===12&&e.key.length===1&&!e.ctrlKey&&!e.altKey&&!e.metaKey){
+      e.preventDefault();startEdit(r,c,true);
+      setTimeout(function(){var cell=getCellEl(r,c);if(cell){var inp=cell.querySelector('input');if(inp)inp.value=e.key}},0);return;
     }
   }
 });
 
-function onEditKeyDown(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    var row = editingCell ? editingCell.row : focusedCell.row;
-    commitEdit();
-    moveFocus(row + 1, focusedCell.col);
+function onEditKeyDown(e){
+  var r=editingCell?editingCell.row:focusedCell.row;
+  var c=editingCell?editingCell.col:focusedCell.col;
+  if(e.key==='Enter'){e.preventDefault();commitEdit();moveFocus(r+1,c);return}
+  if(e.key==='Tab'){e.preventDefault();commitEdit();if(e.shiftKey)moveFocus(r,c-1);else moveFocus(r,c+1);return}
+  if(e.key==='Escape'){e.preventDefault();cancelEdit();return}
+  // 矢印キーで確定して移動
+  if(e.key==='ArrowUp'){e.preventDefault();commitEdit();moveFocus(r-1,c);return}
+  if(e.key==='ArrowDown'){e.preventDefault();commitEdit();moveFocus(r+1,c);return}
+  if(e.key==='ArrowLeft'){
+    // カーソルが先頭なら確定して左移動
+    var inp=e.target;if(inp.selectionStart===0&&inp.selectionEnd===0){e.preventDefault();commitEdit();moveFocus(r,c-1);return}
+    // それ以外はデフォルト動作(テキスト内移動)
     return;
   }
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    var row = editingCell ? editingCell.row : focusedCell.row;
-    var col = editingCell ? editingCell.col : focusedCell.col;
-    commitEdit();
-    if (e.shiftKey) moveFocus(row, col - 1);
-    else moveFocus(row, col + 1);
-    return;
-  }
-  if (e.key === 'Escape') {
-    e.preventDefault();
-    cancelEdit();
+  if(e.key==='ArrowRight'){
+    var inp=e.target;if(inp.selectionStart===inp.value.length){e.preventDefault();commitEdit();moveFocus(r,c+1);return}
     return;
   }
 }
 
-function moveFocus(row, col) {
-  if (row < 0) row = 0;
-  if (row >= tableData.length) row = tableData.length - 1;
-  if (col < 0) col = 0;
-  if (col >= NUM_COLS) col = NUM_COLS - 1;
-  setFocus(row, col);
+function moveFocus(r,c){
+  if(r<0)r=0;if(r>=tableData.length)r=tableData.length-1;
+  if(c<0)c=0;if(c>=NUM_COLS)c=NUM_COLS-1;
+  setFocus(r,c);
 }
 
 // ==================== ステータスドロップダウン ====================
-function showStatusDropdown(row, col) {
+function showStatusDropdown(r,c){
   closeStatusDropdown();
-  var cell = getCellEl(row, col);
-  if (!cell) return;
-  var td = cell.parentElement;
-
-  var dropdown = document.createElement('div');
-  dropdown.className = 'status-dropdown';
-  statusDropdown = { el: dropdown, row: row, col: col };
-
-  var statuses = ['受付中', '注意', '満車', '締切済'];
-  statuses.forEach(function(s) {
-    var opt = document.createElement('div');
-    opt.className = 'option';
-    opt.innerHTML = '<span class="status-badge status-' + s + '">' + s + '</span>';
-    opt.addEventListener('click', function(e) {
-      e.stopPropagation();
-      selectStatus(row, s);
-    });
-    dropdown.appendChild(opt);
+  var cell=getCellEl(r,c);if(!cell)return;var td=cell.parentElement;
+  var dd=document.createElement('div');dd.className='status-dropdown';
+  statusDropdown={el:dd,row:r,col:c};
+  ['受付中','注意','満車','締切済'].forEach(function(s){
+    var opt=document.createElement('div');opt.className='option';
+    opt.innerHTML='<span class="status-badge status-'+s+'">'+s+'</span>';
+    opt.addEventListener('click',function(ev){ev.stopPropagation();selectStatus(r,s)});
+    dd.appendChild(opt);
   });
-
-  td.appendChild(dropdown);
-
-  // クリック外で閉じる
-  setTimeout(function() {
-    document.addEventListener('click', closeStatusDropdownOnClick);
-  }, 0);
+  td.appendChild(dd);
+  setTimeout(function(){document.addEventListener('click',closeStatusDropdownOnClick)},0);
 }
-
-function closeStatusDropdownOnClick(e) {
-  if (statusDropdown && !statusDropdown.el.contains(e.target)) {
-    closeStatusDropdown();
-  }
-}
-
-function closeStatusDropdown() {
-  if (statusDropdown) {
-    statusDropdown.el.remove();
-    document.removeEventListener('click', closeStatusDropdownOnClick);
-    statusDropdown = null;
-  }
-}
-
-function selectStatus(row, status) {
-  var oldStatus = tableData[row].status;
-  closeStatusDropdown();
-
-  if (oldStatus === status) {
-    refreshCellDisplay(row, 3);
-    return;
-  }
-
-  pushUndo(row, 'status', oldStatus, status);
-  tableData[row].status = status;
-  refreshCellDisplay(row, 3);
-
-  // サーバー保存
-  var cell = getCellEl(row, 3);
-  if (cell) cell.classList.add('saving');
-
-  google.script.run
-    .withSuccessHandler(function() {
-      if (cell) cell.classList.remove('saving');
-    })
-    .withFailureHandler(function(err) {
-      if (cell) { cell.classList.remove('saving'); cell.classList.add('error'); }
-      showToast('保存エラー: ' + err.message, 'error');
-    })
-    .saveCell(tableData[row].date, 'status', status);
+function closeStatusDropdownOnClick(e){if(statusDropdown&&!statusDropdown.el.contains(e.target))closeStatusDropdown()}
+function closeStatusDropdown(){if(statusDropdown){statusDropdown.el.remove();document.removeEventListener('click',closeStatusDropdownOnClick);statusDropdown=null}}
+function selectStatus(r,status){
+  var old=tableData[r].status;closeStatusDropdown();
+  if(old===status){refreshCellDisplay(r,3);return}
+  pushUndo(r,'status',old,status);tableData[r].status=status;refreshCellDisplay(r,3);
+  var cell=getCellEl(r,3);if(cell)cell.classList.add('saving');
+  google.script.run.withSuccessHandler(function(){if(cell)cell.classList.remove('saving')})
+    .withFailureHandler(function(e){if(cell){cell.classList.remove('saving');cell.classList.add('error')}showToast('保存エラー: '+e.message,'error')})
+    .saveCell(tableData[r].date,'status',status);
 }
 
 // ==================== Undo/Redo ====================
-function pushUndo(row, key, oldValue, newValue) {
-  undoStack.push({ row: row, key: key, oldValue: oldValue, newValue: newValue });
-  if (undoStack.length > MAX_UNDO) undoStack.shift();
-  redoStack = [];
+function pushUndo(r,key,ov,nv){undoStack.push({row:r,key:key,oldValue:ov,newValue:nv});if(undoStack.length>MAX_UNDO)undoStack.shift();redoStack=[]}
+function doUndo(){
+  if(!undoStack.length)return;var a=undoStack.pop();redoStack.push(a);
+  tableData[a.row][a.key]=a.oldValue;recalcLocal(a.row);refreshRow(a.row);
+  var ci=COL_KEYS.indexOf(a.key),sk=COL_SAVE_KEYS[ci];
+  if(sk)google.script.run.withFailureHandler(function(e){showToast('Undo保存エラー','error')}).saveCell(tableData[a.row].date,sk,a.oldValue);
+  updateSummary();
 }
-
-function doUndo() {
-  if (undoStack.length === 0) return;
-  var action = undoStack.pop();
-  redoStack.push(action);
-
-  tableData[action.row][action.key] = action.oldValue;
-  recalcLocal(action.row);
-  refreshRow(action.row);
-
-  // サーバー保存
-  var colIndex = COL_KEYS.indexOf(action.key);
-  var saveKey = COL_SAVE_KEYS[colIndex];
-  if (saveKey) {
-    google.script.run
-      .withFailureHandler(function(err) {
-        showToast('Undo保存エラー: ' + err.message, 'error');
-      })
-      .saveCell(tableData[action.row].date, saveKey, action.oldValue);
-  }
+function doRedo(){
+  if(!redoStack.length)return;var a=redoStack.pop();undoStack.push(a);
+  tableData[a.row][a.key]=a.newValue;recalcLocal(a.row);refreshRow(a.row);
+  var ci=COL_KEYS.indexOf(a.key),sk=COL_SAVE_KEYS[ci];
+  if(sk)google.script.run.withFailureHandler(function(e){showToast('Redo保存エラー','error')}).saveCell(tableData[a.row].date,sk,a.newValue);
   updateSummary();
 }
 
-function doRedo() {
-  if (redoStack.length === 0) return;
-  var action = redoStack.pop();
-  undoStack.push(action);
-
-  tableData[action.row][action.key] = action.newValue;
-  recalcLocal(action.row);
-  refreshRow(action.row);
-
-  var colIndex = COL_KEYS.indexOf(action.key);
-  var saveKey = COL_SAVE_KEYS[colIndex];
-  if (saveKey) {
-    google.script.run
-      .withFailureHandler(function(err) {
-        showToast('Redo保存エラー: ' + err.message, 'error');
-      })
-      .saveCell(tableData[action.row].date, saveKey, action.newValue);
-  }
-  updateSummary();
-}
-
-// ==================== サマリー更新 ====================
-function updateSummary() {
-  if (tableData.length === 0) {
-    document.getElementById('sumTotalCount').textContent = '-';
-    document.getElementById('sumTotalAmount').textContent = '-';
-    document.getElementById('avgTrucks').textContent = '-';
-    document.getElementById('avgPerTruckCount').textContent = '-';
-    document.getElementById('avgPerTruckAmount').textContent = '-';
+// ==================== サマリー ====================
+function updateSummary(){
+  if(!tableData.length){
+    document.getElementById('sumTotalCount').textContent='-';
+    document.getElementById('sumTotalAmount').textContent='-';
+    document.getElementById('avgPerTruckCount').textContent='-';
+    document.getElementById('avgPerTruckAmount').textContent='-';
     return;
   }
-
-  var totalCount = 0, totalAmount = 0, totalTrucks = 0, count = 0;
-  var sumPerTruckCount = 0, sumPerTruckAmount = 0;
-
-  tableData.forEach(function(r) {
-    totalCount += Number(r.totalCount) || 0;
-    totalAmount += Number(r.totalAmount) || 0;
-    totalTrucks += Number(r.trucks) || 0;
-    sumPerTruckCount += Number(r.perTruckCount) || 0;
-    sumPerTruckAmount += Number(r.perTruckAmount) || 0;
-    count++;
-  });
-
-  document.getElementById('sumTotalCount').textContent = formatNumber(totalCount);
-  document.getElementById('sumTotalAmount').textContent = '¥' + formatNumber(totalAmount);
-  document.getElementById('avgTrucks').textContent = count > 0 ? (totalTrucks / count).toFixed(1) : '-';
-  document.getElementById('avgPerTruckCount').textContent = count > 0 ? (sumPerTruckCount / count).toFixed(1) : '-';
-  document.getElementById('avgPerTruckAmount').textContent = count > 0 ? '¥' + formatNumber(Math.round(sumPerTruckAmount / count)) : '-';
+  var tc=0,ta=0,spc=0,spa=0,cnt=0;
+  tableData.forEach(function(r){tc+=Number(r.totalCount)||0;ta+=Number(r.totalAmount)||0;spc+=Number(r.perTruckCount)||0;spa+=Number(r.perTruckAmount)||0;cnt++});
+  document.getElementById('sumTotalCount').textContent=fmtNum(tc);
+  document.getElementById('sumTotalAmount').textContent=fmtNum(ta);
+  document.getElementById('avgPerTruckCount').textContent=cnt>0?(spc/cnt).toFixed(1):'-';
+  document.getElementById('avgPerTruckAmount').textContent=cnt>0?fmtNum(Math.round(spa/cnt)):'-';
 }
 
-// ==================== 行追加ダイアログ ====================
-function showAddRowDialog() {
-  var overlay = document.createElement('div');
-  overlay.className = 'dialog-overlay';
-  overlay.innerHTML =
-    '<div class="dialog">' +
-      '<h3>配送日を追加</h3>' +
-      '<p>追加する日付を選択してください。</p>' +
-      '<input type="date" id="addRowDate" style="padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.95rem;min-height:44px;width:100%;margin-bottom:16px;" value="' + todayStr() + '">' +
-      '<div class="dialog-actions">' +
-        '<button class="cancel" onclick="this.closest(\'.dialog-overlay\').remove()">キャンセル</button>' +
-        '<button class="primary" onclick="doAddRow()">追加</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(overlay);
+// ==================== 行削除 ====================
+function showDeleteRowDialog(ri){
+  var row=tableData[ri];
+  var ov=document.createElement('div');ov.className='dialog-overlay';
+  ov.innerHTML='<div class="dialog"><h3>行を削除</h3><p>'+row.date+'（'+row.dayName+'）のデータを削除しますか？</p><div class="dialog-actions"><button class="cancel" onclick="this.closest(\'.dialog-overlay\').remove()">キャンセル</button><button class="confirm" onclick="doDeleteRow(\''+row.date+'\')">削除</button></div></div>';
+  document.body.appendChild(ov);
 }
-
-function doAddRow() {
-  var dateInput = document.getElementById('addRowDate');
-  var date = dateInput.value;
-  if (!date) { showToast('日付を入力してください', 'error'); return; }
-
+function doDeleteRow(date){
   document.querySelector('.dialog-overlay').remove();
-
-  google.script.run
-    .withSuccessHandler(function(newRow) {
-      showToast(date + ' を追加しました', 'success');
-      loadData();
-    })
-    .withFailureHandler(function(err) {
-      showToast('追加エラー: ' + err.message, 'error');
-    })
-    .addRow(date);
-}
-
-// ==================== 行削除ダイアログ ====================
-function showDeleteRowDialog(rowIndex) {
-  var row = tableData[rowIndex];
-  var overlay = document.createElement('div');
-  overlay.className = 'dialog-overlay';
-  overlay.innerHTML =
-    '<div class="dialog">' +
-      '<h3>行を削除</h3>' +
-      '<p>' + row.date + '（' + row.dayName + '）のデータを削除しますか？<br>この操作は取り消せません。</p>' +
-      '<div class="dialog-actions">' +
-        '<button class="cancel" onclick="this.closest(\'.dialog-overlay\').remove()">キャンセル</button>' +
-        '<button class="confirm" onclick="doDeleteRow(\'' + row.date + '\')">削除</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(overlay);
-}
-
-function doDeleteRow(date) {
-  document.querySelector('.dialog-overlay').remove();
-
-  google.script.run
-    .withSuccessHandler(function() {
-      showToast(date + ' を削除しました', 'success');
-      loadData();
-    })
-    .withFailureHandler(function(err) {
-      showToast('削除エラー: ' + err.message, 'error');
-    })
-    .deleteRow(date);
+  google.script.run.withSuccessHandler(function(){showToast(date+' を削除','success');loadNext30()})
+    .withFailureHandler(function(e){showToast('削除エラー: '+e.message,'error')}).deleteRow(date);
 }
 
 // ==================== 設定タブ ====================
-function loadDaySettings() {
-  google.script.run
-    .withSuccessHandler(function(data) {
-      renderDaySettings(data || []);
-    })
-    .withFailureHandler(function(err) {
-      showToast('曜日設定の取得エラー: ' + err.message, 'error');
-    })
-    .getDaySettings();
+function loadDaySettings(){
+  google.script.run.withSuccessHandler(function(d){renderDaySettings(d||[])}).withFailureHandler(function(e){showToast('曜日設定取得エラー','error')}).getDaySettings();
 }
-
-function renderDaySettings(settings) {
-  var tbody = document.getElementById('daySettingsBody');
-  tbody.innerHTML = '';
-  var dayOrder = ['月', '火', '水', '木', '金', '土', '日'];
-
-  dayOrder.forEach(function(day) {
-    var setting = settings.find(function(s) { return s.dayName === day; }) || { dayName: day, trucks: 0, enabled: '配送なし' };
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td>' + day + '</td>' +
-      '<td><input type="number" min="0" value="' + (setting.trucks || 0) + '" data-day="' + day + '" class="day-trucks"></td>' +
-      '<td><select data-day="' + day + '" class="day-enabled">' +
-        '<option value="配送あり"' + (setting.enabled === '配送あり' ? ' selected' : '') + '>配送あり</option>' +
-        '<option value="配送なし"' + (setting.enabled === '配送なし' ? ' selected' : '') + '>配送なし</option>' +
-      '</select></td>';
+function renderDaySettings(settings){
+  var tbody=document.getElementById('daySettingsBody');tbody.innerHTML='';
+  ['月','火','水','木','金','土','日'].forEach(function(day){
+    var s=settings.find(function(x){return x.dayName===day})||{dayName:day,trucks:0,enabled:'配送なし'};
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+day+'</td><td><input type="number" min="0" value="'+(s.trucks||0)+'" data-day="'+day+'" class="day-trucks"></td><td><select data-day="'+day+'" class="day-enabled"><option value="配送あり"'+(s.enabled==='配送あり'?' selected':'')+'>配送あり</option><option value="配送なし"'+(s.enabled==='配送なし'?' selected':'')+'>配送なし</option></select></td>';
     tbody.appendChild(tr);
   });
 }
-
-function saveDaySettingsUI() {
-  var settings = [];
-  document.querySelectorAll('.day-trucks').forEach(function(input) {
-    var day = input.dataset.day;
-    var trucks = Number(input.value) || 0;
-    var enabled = document.querySelector('.day-enabled[data-day="' + day + '"]').value;
-    settings.push({ dayName: day, trucks: trucks, enabled: enabled });
+function saveDaySettingsUI(){
+  var settings=[];
+  document.querySelectorAll('.day-trucks').forEach(function(inp){
+    var day=inp.dataset.day;settings.push({dayName:day,trucks:Number(inp.value)||0,enabled:document.querySelector('.day-enabled[data-day="'+day+'"]').value});
   });
-
-  google.script.run
-    .withSuccessHandler(function() {
-      showToast('曜日設定を保存しました', 'success');
-    })
-    .withFailureHandler(function(err) {
-      showToast('保存エラー: ' + err.message, 'error');
-    })
-    .saveDaySettings(settings);
+  google.script.run.withSuccessHandler(function(){showToast('曜日設定を保存','success')}).withFailureHandler(function(e){showToast('保存エラー','error')}).saveDaySettings(settings);
 }
-
-function loadSpecialDays() {
-  google.script.run
-    .withSuccessHandler(function(data) {
-      renderSpecialDays(data || []);
-    })
-    .withFailureHandler(function(err) {
-      showToast('特別日設定の取得エラー: ' + err.message, 'error');
-    })
-    .getSpecialDays();
+function loadSpecialDays(){
+  google.script.run.withSuccessHandler(function(d){renderSpecialDays(d||[])}).withFailureHandler(function(e){showToast('特別日取得エラー','error')}).getSpecialDays();
 }
+function renderSpecialDays(days){
+  var tbody=document.getElementById('specialDaysBody');tbody.innerHTML='';
+  if(!days.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#999;padding:20px">設定なし</td></tr>';return}
+  days.forEach(function(d){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+d.date+'</td><td>'+d.trucks+'</td><td>'+d.type+'</td><td>'+(d.memo||'')+'</td><td><button class="delete-btn-small" onclick="deleteSpecialDayUI(\''+d.date+'\')">削除</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+function saveSpecialDayUI(){
+  var date=document.getElementById('specialDate').value;if(!date){showToast('開始日を入力','error');return}
+  var data={date:date,endDate:document.getElementById('specialEndDate').value||'',trucks:Number(document.getElementById('specialTrucks').value)||0,type:document.getElementById('specialType').value,memo:document.getElementById('specialMemo').value};
+  google.script.run.withSuccessHandler(function(){showToast('特別日を追加','success');loadSpecialDays();document.getElementById('specialDate').value='';document.getElementById('specialEndDate').value='';document.getElementById('specialMemo').value=''})
+    .withFailureHandler(function(e){showToast('保存エラー: '+e.message,'error')}).saveSpecialDay(data);
+}
+function deleteSpecialDayUI(date){if(!confirm(date+' を削除しますか？'))return;google.script.run.withSuccessHandler(function(){showToast('削除','success');loadSpecialDays()}).deleteSpecialDay(date)}
 
-function renderSpecialDays(days) {
-  var tbody = document.getElementById('specialDaysBody');
-  tbody.innerHTML = '';
-
-  if (days.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">特別日の設定はありません</td></tr>';
-    return;
+// 祝日・販促期間
+function loadHolidays(){
+  google.script.run.withSuccessHandler(function(d){renderHolidays(d||[])}).withFailureHandler(function(e){showToast('祝日取得エラー','error')}).getHolidays();
+}
+function renderHolidays(items){
+  var tbody=document.getElementById('holidayBody');tbody.innerHTML='';
+  if(!items.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#999;padding:20px">データなし</td></tr>';return}
+  items.forEach(function(h){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+h.date+'</td><td>'+(h.endDate||'-')+'</td><td>'+h.type+'</td><td>'+h.name+'</td><td>'+(h.memo||'')+'</td><td><button class="delete-btn-small" onclick="deleteHolidayUI(\''+h.date+'\',\''+h.name.replace(/'/g,"\\'")+'\')">削除</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+function saveHolidayUI(){
+  var date=document.getElementById('holidayDate').value,name=document.getElementById('holidayName').value;
+  if(!date||!name){showToast('日付と名称は必須','error');return}
+  var data={date:date,endDate:document.getElementById('holidayEndDate').value||'',type:document.getElementById('holidayType').value,name:name,memo:document.getElementById('holidayMemo').value};
+  google.script.run.withSuccessHandler(function(){showToast('登録完了','success');loadHolidays();document.getElementById('holidayDate').value='';document.getElementById('holidayEndDate').value='';document.getElementById('holidayName').value='';document.getElementById('holidayMemo').value=''})
+    .withFailureHandler(function(e){showToast('保存エラー','error')}).saveHoliday(data);
+}
+function deleteHolidayUI(date,name){if(!confirm(name+' を削除しますか？'))return;google.script.run.withSuccessHandler(function(){showToast('削除','success');loadHolidays()}).deleteHoliday(date,name)}
+function importHolidaysUI(){
+  var text=document.getElementById('importArea').value.trim();if(!text){showToast('データを貼り付けてください','error');return}
+  var lines=text.split('\n'),rows=[];
+  for(var i=0;i<lines.length;i++){
+    var parts=lines[i].split(',');if(parts.length<4)continue;
+    rows.push({date:parts[0].trim(),endDate:(parts[1]||'').trim(),type:parts[2].trim(),name:parts[3].trim(),memo:(parts[4]||'').trim()});
   }
-
-  days.forEach(function(d) {
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td>' + d.date + '</td>' +
-      '<td>' + d.trucks + '</td>' +
-      '<td>' + d.type + '</td>' +
-      '<td>' + (d.memo || '') + '</td>' +
-      '<td><button class="delete-btn-small" onclick="deleteSpecialDayUI(\'' + d.date + '\')">削除</button></td>';
-    tbody.appendChild(tr);
-  });
-}
-
-function saveSpecialDayUI() {
-  var date = document.getElementById('specialDate').value;
-  if (!date) { showToast('日付を入力してください', 'error'); return; }
-
-  var data = {
-    date: date,
-    trucks: Number(document.getElementById('specialTrucks').value) || 0,
-    type: document.getElementById('specialType').value,
-    memo: document.getElementById('specialMemo').value
-  };
-
-  google.script.run
-    .withSuccessHandler(function() {
-      showToast('特別日を追加しました', 'success');
-      loadSpecialDays();
-      document.getElementById('specialDate').value = '';
-      document.getElementById('specialTrucks').value = '0';
-      document.getElementById('specialMemo').value = '';
-    })
-    .withFailureHandler(function(err) {
-      showToast('保存エラー: ' + err.message, 'error');
-    })
-    .saveSpecialDay(data);
-}
-
-function deleteSpecialDayUI(date) {
-  if (!confirm(date + ' の特別日設定を削除しますか？')) return;
-
-  google.script.run
-    .withSuccessHandler(function() {
-      showToast('特別日を削除しました', 'success');
-      loadSpecialDays();
-    })
-    .withFailureHandler(function(err) {
-      showToast('削除エラー: ' + err.message, 'error');
-    })
-    .deleteSpecialDay(date);
+  if(!rows.length){showToast('有効なデータがありません','error');return}
+  google.script.run.withSuccessHandler(function(r){showToast(r.count+'件インポート完了','success');loadHolidays();document.getElementById('importArea').value=''})
+    .withFailureHandler(function(e){showToast('インポートエラー','error')}).importHolidays(rows);
 }
 
 // ==================== データ確認タブ ====================
-function loadExportData() {
-  var start = document.getElementById('exportStartDate').value;
-  var end = document.getElementById('exportEndDate').value;
-  if (!start || !end) return;
-
-  google.script.run
-    .withSuccessHandler(function(data) {
-      renderExportTable(data || []);
-    })
-    .withFailureHandler(function(err) {
-      showToast('データ取得エラー: ' + err.message, 'error');
-    })
-    .getRows(start, end);
+function loadExportData(){
+  var s=document.getElementById('exportStartDate').value,e=document.getElementById('exportEndDate').value;if(!s||!e)return;
+  google.script.run.withSuccessHandler(function(data){renderExportTable(data||[])}).withFailureHandler(function(e){showToast('エラー','error')}).getRows(s,e);
 }
-
-function renderExportTable(data) {
-  var tbody = document.getElementById('exportTableBody');
-  tbody.innerHTML = '';
-
-  if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#999;padding:20px;">データなし</td></tr>';
-    return;
-  }
-
-  data.forEach(function(r) {
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td style="text-align:left">' + r.date + '</td>' +
-      '<td style="text-align:center">' + r.dayName + '</td>' +
-      '<td>' + r.trucks + '</td>' +
-      '<td style="text-align:center"><span class="status-badge status-' + r.status + '">' + r.status + '</span></td>' +
-      '<td>' + formatNumber(r.totalCount) + '</td>' +
-      '<td>' + formatNumber(r.totalAmount) + '</td>' +
-      '<td>' + r.perTruckCount + '</td>' +
-      '<td>' + formatNumber(r.perTruckAmount) + '</td>' +
-      '<td>' + formatNumber(r.yesterdayCount) + '</td>' +
-      '<td>' + formatNumber(r.yesterdayAmount) + '</td>' +
-      '<td>' + formatNumber(r.todayCount) + '</td>' +
-      '<td>' + formatNumber(r.todayAmount) + '</td>' +
-      '<td style="text-align:left">' + (r.memo || '') + '</td>';
+function renderExportTable(data){
+  var tbody=document.getElementById('exportTableBody');tbody.innerHTML='';
+  if(!data.length){tbody.innerHTML='<tr><td colspan="13" style="text-align:center;color:#999;padding:20px">データなし</td></tr>';return}
+  data.forEach(function(r){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td style="text-align:left">'+r.date+'</td><td style="text-align:center">'+r.dayName+'</td><td>'+r.trucks+'</td><td style="text-align:center"><span class="status-badge status-'+r.status+'">'+r.status+'</span></td><td>'+fmtNum(r.totalCount)+'</td><td>'+fmtNum(r.totalAmount)+'</td><td>'+r.perTruckCount+'</td><td>'+fmtNum(r.perTruckAmount)+'</td><td>'+fmtNum(r.yesterdayCount)+'</td><td>'+fmtNum(r.yesterdayAmount)+'</td><td>'+fmtNum(r.todayCount)+'</td><td>'+fmtNum(r.todayAmount)+'</td><td style="text-align:left">'+(r.memo||'')+'</td>';
     tbody.appendChild(tr);
   });
 }
-
-function doExportCSV() {
-  var start = document.getElementById('exportStartDate').value;
-  var end = document.getElementById('exportEndDate').value;
-  if (!start || !end) { showToast('日付範囲を指定してください', 'error'); return; }
-
-  google.script.run
-    .withSuccessHandler(function(csv) {
-      if (!csv) { showToast('データがありません', 'info'); return; }
-
-      // BOM付きUTF-8でCSVダウンロード
-      var bom = '\uFEFF';
-      var blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = '満車管理_' + start + '_' + end + '.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('CSVをダウンロードしました', 'success');
-    })
-    .withFailureHandler(function(err) {
-      showToast('エクスポートエラー: ' + err.message, 'error');
-    })
-    .exportCSV(start, end);
+function doExportCSV(){
+  var s=document.getElementById('exportStartDate').value,e=document.getElementById('exportEndDate').value;
+  if(!s||!e){showToast('日付範囲を指定','error');return}
+  google.script.run.withSuccessHandler(function(csv){
+    if(!csv){showToast('データなし','info');return}
+    var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='満車管理_'+s+'_'+e+'.csv';a.click();URL.revokeObjectURL(url);showToast('CSVダウンロード完了','success');
+  }).withFailureHandler(function(e){showToast('エクスポートエラー','error')}).exportCSV(s,e);
+}
+function loadChangeLog(){
+  google.script.run.withSuccessHandler(function(logs){
+    var tbody=document.getElementById('changeLogBody');tbody.innerHTML='';
+    if(!logs||!logs.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#999;padding:20px">ログなし</td></tr>';return}
+    logs.forEach(function(l){var tr=document.createElement('tr');tr.innerHTML='<td>'+l.timestamp+'</td><td>'+l.user+'</td><td>'+l.targetDate+'</td><td>'+l.field+'</td><td>'+l.oldValue+'</td><td>'+l.newValue+'</td>';tbody.appendChild(tr)});
+  }).getChangeLog(100);
 }
 
-function loadChangeLog() {
-  google.script.run
-    .withSuccessHandler(function(logs) {
-      renderChangeLog(logs || []);
-    })
-    .withFailureHandler(function(err) {
-      showToast('変更ログ取得エラー: ' + err.message, 'error');
-    })
-    .getChangeLog(100);
+// ==================== 分析タブ ====================
+function runAnalysis(){
+  var s=document.getElementById('analysisStartDate').value,e=document.getElementById('analysisEndDate').value;
+  if(!s||!e){showToast('期間を指定','error');return}
+  google.script.run.withSuccessHandler(function(result){
+    if(!result.rows||!result.rows.length){showToast('分析データなし','info');return}
+    renderAnalysis(result.rows);
+  }).withFailureHandler(function(e){showToast('分析エラー: '+e.message,'error')}).getAnalysisData(s,e);
 }
 
-function renderChangeLog(logs) {
-  var tbody = document.getElementById('changeLogBody');
-  tbody.innerHTML = '';
+function renderAnalysis(rows){
+  // サマリー
+  document.getElementById('analysisSummarySection').style.display='block';
+  document.getElementById('comparisonSection').style.display='block';
+  document.getElementById('regressionSection').style.display='block';
+  document.getElementById('regressionAmountSection').style.display='block';
 
-  if (logs.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">変更ログはありません</td></tr>';
-    return;
+  var totalDays=rows.length,totalCount=0,totalAmount=0,totalPTC=0,totalPTA=0;
+  rows.forEach(function(r){totalCount+=r.totalCount;totalAmount+=r.totalAmount;totalPTC+=r.perTruckCount;totalPTA+=r.perTruckAmount});
+
+  var cards=document.getElementById('statCards');
+  cards.innerHTML=
+    '<div class="stat-card"><div class="stat-label">分析対象日数</div><div class="stat-value">'+totalDays+'日</div></div>'+
+    '<div class="stat-card"><div class="stat-label">総件数</div><div class="stat-value">'+fmtNum(totalCount)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">総金額</div><div class="stat-value">'+fmtNum(totalAmount)+'千円</div></div>'+
+    '<div class="stat-card red"><div class="stat-label">平均1台あたり件数</div><div class="stat-value">'+(totalPTC/totalDays).toFixed(1)+'</div></div>'+
+    '<div class="stat-card red"><div class="stat-label">平均1台あたり金額</div><div class="stat-value">'+fmtNum(Math.round(totalPTA/totalDays))+'千円</div></div>';
+
+  // 曜日区分別比較
+  var groups={};
+  rows.forEach(function(r){
+    var key=r.dayType;
+    if(r.isPromo)key='販促期間';
+    if(!groups[key])groups[key]={count:0,totalCount:0,totalAmount:0,ptc:0,pta:0};
+    groups[key].count++;groups[key].totalCount+=r.totalCount;groups[key].totalAmount+=r.totalAmount;
+    groups[key].ptc+=r.perTruckCount;groups[key].pta+=r.perTruckAmount;
+  });
+
+  var compBody=document.getElementById('comparisonBody');compBody.innerHTML='';
+  var baseAvgCount=null;
+  ['平日','土日','祝日','販促期間'].forEach(function(k){
+    var g=groups[k];if(!g)return;
+    var avgC=g.totalCount/g.count,avgA=g.totalAmount/g.count;
+    var avgPTC=g.ptc/g.count,avgPTA=g.pta/g.count;
+    if(k==='平日')baseAvgCount=avgC;
+    var ratio=baseAvgCount?((avgC/baseAvgCount)*100).toFixed(0)+'%':'-';
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td style="text-align:left;font-weight:600">'+k+'</td><td>'+g.count+'</td><td>'+avgC.toFixed(1)+'</td><td>'+fmtNum(Math.round(avgA))+'</td><td style="font-weight:700;color:#c62828">'+avgPTC.toFixed(1)+'</td><td style="font-weight:700;color:#c62828">'+fmtNum(Math.round(avgPTA))+'</td><td>'+ratio+'</td>';
+    compBody.appendChild(tr);
+  });
+
+  // 重回帰分析（件数）
+  runRegression(rows,'perTruckCount','regressionResult');
+  // 重回帰分析（金額）
+  runRegressionAmount(rows,'perTruckAmount','regressionAmountResult');
+}
+
+// ==================== 重回帰分析（最小二乗法） ====================
+function runRegression(rows,targetKey,resultElId){
+  // y = b0 + b1*trucks + b2*weekend + b3*holiday + b4*promo
+  var n=rows.length;
+  if(n<5){document.getElementById(resultElId).textContent='データ不足（5件以上必要）';return}
+
+  var X=[],Y=[];
+  for(var i=0;i<n;i++){
+    X.push([1,rows[i].trucks,rows[i].weekendFlag,rows[i].holidayFlag,rows[i].promoFlag]);
+    Y.push(rows[i][targetKey]);
   }
 
-  logs.forEach(function(log) {
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td>' + log.timestamp + '</td>' +
-      '<td>' + log.user + '</td>' +
-      '<td>' + log.targetDate + '</td>' +
-      '<td>' + log.field + '</td>' +
-      '<td>' + log.oldValue + '</td>' +
-      '<td>' + log.newValue + '</td>';
-    tbody.appendChild(tr);
-  });
+  var coeffs=olsRegression(X,Y);
+  if(!coeffs){document.getElementById(resultElId).textContent='回帰計算に失敗しました';return}
+
+  // R^2計算
+  var yMean=Y.reduce(function(a,b){return a+b},0)/n;
+  var ssRes=0,ssTot=0;
+  for(var i=0;i<n;i++){
+    var yHat=0;for(var j=0;j<coeffs.length;j++)yHat+=coeffs[j]*X[i][j];
+    ssRes+=(Y[i]-yHat)*(Y[i]-yHat);
+    ssTot+=(Y[i]-yMean)*(Y[i]-yMean);
+  }
+  var r2=ssTot>0?1-ssRes/ssTot:0;
+
+  regressionModel=coeffs;
+
+  var el=document.getElementById(resultElId);
+  el.textContent=
+    '【1台あたり件数の重回帰分析結果】\n\n'+
+    'y = '+coeffs[0].toFixed(3)+' + '+coeffs[1].toFixed(3)+' x 台数 + '+coeffs[2].toFixed(3)+' x 土日 + '+coeffs[3].toFixed(3)+' x 祝日 + '+coeffs[4].toFixed(3)+' x 販促\n\n'+
+    '切片 (定数):     '+coeffs[0].toFixed(3)+'\n'+
+    '台数:           '+coeffs[1].toFixed(3)+(coeffs[1]<0?' (台数が増えると1台あたり件数は減少)':' (台数が増えると1台あたり件数も増加)')+'\n'+
+    '土日フラグ:      '+coeffs[2].toFixed(3)+(coeffs[2]>0?' (土日は平日より多い)':' (土日は平日より少ない)')+'\n'+
+    '祝日フラグ:      '+coeffs[3].toFixed(3)+(coeffs[3]>0?' (祝日は増加傾向)':' (祝日は減少傾向)')+'\n'+
+    '販促フラグ:      '+coeffs[4].toFixed(3)+(coeffs[4]>0?' (販促期間は増加効果あり)':' (販促期間の効果は限定的)')+'\n\n'+
+    '決定係数 R²:     '+r2.toFixed(4)+' ('+(r2*100).toFixed(1)+'%の説明力)\n'+
+    'サンプル数:      '+n+'件';
+}
+
+function runRegressionAmount(rows,targetKey,resultElId){
+  var n=rows.length;
+  if(n<5){document.getElementById(resultElId).textContent='データ不足';return}
+  var X=[],Y=[];
+  for(var i=0;i<n;i++){
+    X.push([1,rows[i].trucks,rows[i].weekendFlag,rows[i].holidayFlag,rows[i].promoFlag]);
+    Y.push(rows[i][targetKey]);
+  }
+  var coeffs=olsRegression(X,Y);
+  if(!coeffs){document.getElementById(resultElId).textContent='回帰計算に失敗';return}
+
+  var yMean=Y.reduce(function(a,b){return a+b},0)/n;
+  var ssRes=0,ssTot=0;
+  for(var i=0;i<n;i++){var yHat=0;for(var j=0;j<coeffs.length;j++)yHat+=coeffs[j]*X[i][j];ssRes+=(Y[i]-yHat)*(Y[i]-yHat);ssTot+=(Y[i]-yMean)*(Y[i]-yMean)}
+  var r2=ssTot>0?1-ssRes/ssTot:0;
+  regressionAmountModel=coeffs;
+
+  document.getElementById(resultElId).textContent=
+    '【1台あたり金額(千円)の重回帰分析結果】\n\n'+
+    'y = '+coeffs[0].toFixed(1)+' + '+coeffs[1].toFixed(1)+' x 台数 + '+coeffs[2].toFixed(1)+' x 土日 + '+coeffs[3].toFixed(1)+' x 祝日 + '+coeffs[4].toFixed(1)+' x 販促\n\n'+
+    '切片 (定数):     '+coeffs[0].toFixed(1)+' 千円\n'+
+    '台数:           '+coeffs[1].toFixed(1)+' 千円\n'+
+    '土日フラグ:      '+coeffs[2].toFixed(1)+' 千円\n'+
+    '祝日フラグ:      '+coeffs[3].toFixed(1)+' 千円\n'+
+    '販促フラグ:      '+coeffs[4].toFixed(1)+' 千円\n\n'+
+    '決定係数 R²:     '+r2.toFixed(4)+'\n'+
+    'サンプル数:      '+n+'件';
+}
+
+// OLS最小二乗法: (X'X)^-1 X'Y
+function olsRegression(X,Y){
+  var m=X[0].length,n=X.length;
+  // X'X
+  var XtX=[];for(var i=0;i<m;i++){XtX[i]=[];for(var j=0;j<m;j++){var s=0;for(var k=0;k<n;k++)s+=X[k][i]*X[k][j];XtX[i][j]=s}}
+  // X'Y
+  var XtY=[];for(var i=0;i<m;i++){var s=0;for(var k=0;k<n;k++)s+=X[k][i]*Y[k];XtY[i]=s}
+  // 逆行列
+  var inv=invertMatrix(XtX);if(!inv)return null;
+  // 係数
+  var coeffs=[];for(var i=0;i<m;i++){var s=0;for(var j=0;j<m;j++)s+=inv[i][j]*XtY[j];coeffs[i]=s}
+  return coeffs;
+}
+
+// ガウス・ジョルダン法で逆行列
+function invertMatrix(mat){
+  var n=mat.length;
+  var aug=[];
+  for(var i=0;i<n;i++){aug[i]=[];for(var j=0;j<n;j++)aug[i][j]=mat[i][j];for(var j=0;j<n;j++)aug[i][n+j]=(i===j)?1:0}
+  for(var col=0;col<n;col++){
+    var maxRow=col,maxVal=Math.abs(aug[col][col]);
+    for(var r=col+1;r<n;r++){if(Math.abs(aug[r][col])>maxVal){maxVal=Math.abs(aug[r][col]);maxRow=r}}
+    if(maxVal<1e-12)return null;
+    var tmp=aug[col];aug[col]=aug[maxRow];aug[maxRow]=tmp;
+    var pivot=aug[col][col];
+    for(var j=0;j<2*n;j++)aug[col][j]/=pivot;
+    for(var r=0;r<n;r++){
+      if(r===col)continue;var factor=aug[r][col];
+      for(var j=0;j<2*n;j++)aug[r][j]-=factor*aug[col][j];
+    }
+  }
+  var inv=[];for(var i=0;i<n;i++){inv[i]=[];for(var j=0;j<n;j++)inv[i][j]=aug[i][n+j]}
+  return inv;
+}
+
+// 予測
+function runPrediction(){
+  if(!regressionModel){showToast('先に分析を実行してください','error');return}
+  var trucks=Number(document.getElementById('predTrucks').value)||3;
+  var dayType=document.getElementById('predDayType').value;
+  var promo=Number(document.getElementById('predPromo').value);
+  var weekend=(dayType==='土日')?1:0;
+  var holiday=(dayType==='祝日')?1:0;
+
+  var predCount=regressionModel[0]+regressionModel[1]*trucks+regressionModel[2]*weekend+regressionModel[3]*holiday+regressionModel[4]*promo;
+  var predAmount=regressionAmountModel?(regressionAmountModel[0]+regressionAmountModel[1]*trucks+regressionAmountModel[2]*weekend+regressionAmountModel[3]*holiday+regressionAmountModel[4]*promo):0;
+  var totalPredCount=Math.round(predCount*trucks*10)/10;
+  var totalPredAmount=Math.round(predAmount*trucks);
+
+  var el=document.getElementById('predictionResult');el.style.display='block';
+  el.innerHTML='<strong>予測結果</strong>（'+dayType+(promo?' + 販促期間':'')+' / '+trucks+'台）<br>'+
+    '1台あたり件数: <strong style="color:#c62828;font-size:1.2rem">'+predCount.toFixed(1)+'件</strong>　'+
+    '1台あたり金額: <strong style="color:#c62828;font-size:1.2rem">'+fmtNum(Math.round(predAmount))+'千円</strong><br>'+
+    '全体予測: 約 '+fmtNum(Math.round(totalPredCount))+'件 / '+fmtNum(totalPredAmount)+'千円';
 }
 
 // ==================== トースト ====================
-function showToast(msg, type) {
-  var container = document.getElementById('toastContainer');
-  var toast = document.createElement('div');
-  toast.className = 'toast ' + (type || 'info');
-  toast.textContent = msg;
-  container.appendChild(toast);
-  setTimeout(function() {
-    toast.style.opacity = '0';
-    toast.style.transition = 'opacity 0.3s';
-    setTimeout(function() { toast.remove(); }, 300);
-  }, 3000);
+function showToast(msg,type){
+  var c=document.getElementById('toastContainer'),t=document.createElement('div');
+  t.className='toast '+(type||'info');t.textContent=msg;c.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(function(){t.remove()},300)},3000);
 }
 </script>
-
 </body>
 </html>
