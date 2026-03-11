@@ -213,6 +213,9 @@ function getNext30DeliveryDays() {
   var daySettings = getDaySettingsMap(ss);
   var specialDaysMap = getSpecialDaysMap(ss);
 
+  // 重複日付行を自動で統合・削除
+  deduplicateMainSheet(sheet);
+
   // 既存データをマップ化
   var existingMap = {};
   if (sheet.getLastRow() > 1) {
@@ -279,6 +282,9 @@ function getRows(startDate, endDate) {
   var ss = getSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAMES.MAIN);
   if (!sheet || sheet.getLastRow() <= 1) return [];
+
+  // 重複行があれば統合
+  deduplicateMainSheet(sheet);
 
   var daySettings = getDaySettingsMap(ss);
   var specialDaysMap = getSpecialDaysMap(ss);
@@ -399,8 +405,11 @@ function getRowData(sheet, rowIndex) {
 function addRow(date) {
   var sheet = getSpreadsheet().getSheetByName(SHEET_NAMES.MAIN);
   if (!sheet) throw new Error('満車管理シートが見つかりません');
-  if (findRowByDate(sheet, date) !== -1) {
-    throw new Error('指定日 ' + date + ' のデータは既に存在します');
+
+  var existingRowIndex = findRowByDate(sheet, date);
+  if (existingRowIndex !== -1) {
+    // 既に存在する場合はそのデータを返す（重複追加しない）
+    return getRowData(sheet, existingRowIndex);
   }
 
   var d = new Date(date);
@@ -752,6 +761,66 @@ function findRowByDate(sheet, date) {
     if (formatted === date) return i + 2;
   }
   return -1;
+}
+
+/**
+ * 満車管理シートの重複日付行を統合・削除する。
+ * 同じ日付が複数行ある場合、データが入っている行を優先して残し、空の重複行を削除。
+ * 両方にデータがある場合は最初の行を残す。
+ */
+function deduplicateMainSheet(sheet) {
+  if (sheet.getLastRow() <= 1) return;
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, MAIN_HEADERS.length).getValues();
+  var dateMap = {}; // dateStr -> { bestIdx, deleteIndices }
+
+  for (var i = 0; i < data.length; i++) {
+    var dateVal = data[i][0];
+    var key = dateVal instanceof Date ? formatDate(dateVal) : String(dateVal);
+    if (!key || key === 'undefined' || key === '') continue;
+
+    if (!dateMap[key]) {
+      dateMap[key] = { bestIdx: i, deleteIndices: [] };
+    } else {
+      // 重複発見: データが多い方を残す
+      var existingRow = data[dateMap[key].bestIdx];
+      var currentRow = data[i];
+      var existingScore = rowDataScore(existingRow);
+      var currentScore = rowDataScore(currentRow);
+
+      if (currentScore > existingScore) {
+        // 新しい方がデータが多い → 既存を削除対象に
+        dateMap[key].deleteIndices.push(dateMap[key].bestIdx);
+        dateMap[key].bestIdx = i;
+      } else {
+        // 既存を残す → 新しい方を削除対象に
+        dateMap[key].deleteIndices.push(i);
+      }
+    }
+  }
+
+  // 削除対象行を収集し、降順でソート（後ろから削除することでインデックスがずれない）
+  var rowsToDelete = [];
+  for (var k in dateMap) {
+    for (var j = 0; j < dateMap[k].deleteIndices.length; j++) {
+      rowsToDelete.push(dateMap[k].deleteIndices[j] + 2); // シート上の行番号（1-indexed, ヘッダー分+1）
+    }
+  }
+
+  if (rowsToDelete.length === 0) return;
+
+  rowsToDelete.sort(function(a, b) { return b - a; }); // 降順
+  for (var d = 0; d < rowsToDelete.length; d++) {
+    sheet.deleteRow(rowsToDelete[d]);
+  }
+}
+
+/**
+ * 行のデータ充実度をスコア化。数値列の合計で判定。
+ */
+function rowDataScore(row) {
+  // trucks(2) + totalCount(4) + totalAmount(5) + yesterdayCount(8) + yesterdayAmount(9) + todayCount(10) + todayAmount(11)
+  return (Number(row[2]) || 0) + (Number(row[4]) || 0) + (Number(row[5]) || 0) +
+         (Number(row[8]) || 0) + (Number(row[9]) || 0) + (Number(row[10]) || 0) + (Number(row[11]) || 0);
 }
 
 function formatDate(d) {
