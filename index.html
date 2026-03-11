@@ -31,12 +31,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
 .data-table tr.today-row{background:#e8f0fe!important}
 .data-table tr.past-row{background:#f8f8f8}
 .data-table tr.past-row:hover{background:#f0f0f0}
-.data-table tr.saturday-row{background:#e3f2fd}
-.data-table tr.saturday-row:hover{background:#bbdefb}
-.data-table tr.sunday-row,.data-table tr.holiday-row{background:#fce4ec}
-.data-table tr.sunday-row:hover,.data-table tr.holiday-row:hover{background:#f8bbd0}
-.data-table tr.saturday-row.past-row{background:#e3f2fd99}
-.data-table tr.sunday-row.past-row,.data-table tr.holiday-row.past-row{background:#fce4ec99}
+.data-table td.saturday-cell{background:#e3f2fd}
+.data-table td.sunday-cell,.data-table td.holiday-cell{background:#fce4ec}
+.data-table tr.past-row td.saturday-cell{background:#e3f2fd99}
+.data-table tr.past-row td.sunday-cell,.data-table tr.past-row td.holiday-cell{background:#fce4ec99}
 .cell{width:100%;height:100%;padding:8px 4px;display:flex;align-items:center;justify-content:flex-end;cursor:default;outline:none;min-height:40px;user-select:none}
 .cell.text-left{justify-content:flex-start}
 .cell.text-center{justify-content:center}
@@ -161,7 +159,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
   <div class="table-wrapper">
     <table class="data-table" id="mainTable">
       <thead><tr>
-        <th style="width:78px">配送日</th>
+        <th style="width:88px">配送日</th>
         <th style="width:28px">曜</th>
         <th class="highlight-col" style="width:50px">1台<br>件数</th>
         <th class="highlight-col" style="width:68px">1台<br>金額<span class="unit-label">千円</span></th>
@@ -442,9 +440,9 @@ function renderTable(){
     var classes=[];
     if(row.date===today)classes.push('today-row');
     else if(row.date<today)classes.push('past-row');
-    if(row.dayName==='土')classes.push('saturday-row');
-    else if(row.dayName==='日')classes.push('sunday-row');
-    if(holidayDateSet[row.date])classes.push('holiday-row');
+    var isSat=row.dayName==='土';
+    var isSun=row.dayName==='日';
+    var isHol=!!holidayDateSet[row.date];
     tr.className=classes.join(' ');
 
     // 表示順に値を並べる
@@ -452,6 +450,11 @@ function renderTable(){
 
     for(var ci=0;ci<NUM_COLS;ci++){
       var td=document.createElement('td');
+      // 配送日・曜日列のみ土日祝の色付け
+      if(ci<=1){
+        if(isHol||isSun)td.classList.add(isHol?'holiday-cell':'sunday-cell');
+        else if(isSat)td.classList.add('saturday-cell');
+      }
       var cell=document.createElement('div');
       cell.className='cell';
       cell.dataset.row=ri;cell.dataset.col=ci;
@@ -483,15 +486,19 @@ function renderTable(){
         if(defT>0&&curT>defT)cell.classList.add('trucks-over');
         else if(defT>0&&curT<defT)cell.classList.add('trucks-under');
       }
-      // 1台あたり件数: 目標超えで赤
+      // 1台あたり件数: 目標超えで赤（小数点1桁表示）
       else if(ci===2){
-        cell.textContent=fmtNum(val);
+        cell.textContent=(val!==null&&val!==undefined&&val!==''&&val!==0)?Number(val).toFixed(1):'';
         if(targets.targetCount>0&&Number(val)>=targets.targetCount)cell.classList.add('over-target');
       }
       // 1台あたり金額: 目標超えで赤
       else if(ci===3){
         cell.textContent=fmtNum(val);
         if(targets.targetAmount>0&&Number(val)>=targets.targetAmount)cell.classList.add('over-target');
+      }
+      // 当日件数・金額: 0なら非表示
+      else if(ci===10||ci===11){
+        cell.textContent=(Number(val)||0)===0?'':fmtNum(val);
       }
       else if(NUMERIC_DISP.indexOf(ci)!==-1||CALC_DISP.indexOf(ci)!==-1){
         cell.textContent=fmtNum(val);
@@ -577,8 +584,9 @@ function refreshCellDisplay(r,c){
     if(defT>0&&curT>defT)cell.classList.add('trucks-over');
     else if(defT>0&&curT<defT)cell.classList.add('trucks-under');
   }
-  else if(c===2){cell.textContent=fmtNum(val);if(targets.targetCount>0&&Number(val)>=targets.targetCount)cell.classList.add('over-target')}
+  else if(c===2){cell.textContent=(val!==null&&val!==undefined&&val!==''&&val!==0)?Number(val).toFixed(1):'';if(targets.targetCount>0&&Number(val)>=targets.targetCount)cell.classList.add('over-target')}
   else if(c===3){cell.textContent=fmtNum(val);if(targets.targetAmount>0&&Number(val)>=targets.targetAmount)cell.classList.add('over-target')}
+  else if(c===10||c===11)cell.textContent=(Number(val)||0)===0?'':fmtNum(val);
   else if(NUMERIC_DISP.indexOf(c)!==-1||CALC_DISP.indexOf(c)!==-1)cell.textContent=fmtNum(val);
   else cell.textContent=val||'';
 }
