@@ -27,7 +27,10 @@ var SHEET_NAMES = {
   DAY_SETTINGS: '曜日設定',
   SPECIAL_DAYS: '特別日設定',
   HOLIDAYS: '祝日・販促期間',
-  CHANGE_LOG: '変更ログ'
+  CHANGE_LOG: '変更ログ',
+  CONTRACT_LOG: '契約履歴ログ',
+  AREA_MASTER: 'エリアマスタ',
+  AREA_EXCEPTION: 'エリア例外設定'
 };
 
 var MAIN_HEADERS = [
@@ -36,7 +39,7 @@ var MAIN_HEADERS = [
   '1台あたり件数', '1台あたり金額(千円)',
   '昨日までの合計件数', '昨日までの合計金額(千円)',
   '当日契約件数', '当日契約金額(千円)',
-  '備考'
+  '備考', '満車確定日', '満車時件数'
 ];
 
 var DAY_SETTINGS_HEADERS = ['曜日', '通常台数', '有効フラグ'];
@@ -46,6 +49,17 @@ var SPECIAL_DAYS_HEADERS = ['日付', '台数', '種別', 'メモ'];
 var HOLIDAYS_HEADERS = ['日付', '終了日', '種別', '名称', 'メモ'];
 
 var CHANGE_LOG_HEADERS = ['変更日時', '変更者', '対象日付', '変更前', '変更後', '項目名'];
+
+var CONTRACT_LOG_HEADERS = [
+  '契約日', '契約曜日', '契約日販促フラグ',
+  '配送日', '配送曜日', '配送日販促フラグ',
+  'リードタイム(日)', '件数', '金額',
+  '契約時点の最短空き日', '最短空きまでの日数', '最短空きの曜日'
+];
+
+var AREA_MASTER_HEADERS = ['エリアID', 'エリア名', '通常配送曜日', '備考'];
+
+var AREA_EXCEPTION_HEADERS = ['日付', 'エリアID', '例外種別', '理由'];
 
 var DAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -85,6 +99,18 @@ function setup() {
   getOrCreateSheet(ss, SHEET_NAMES.SPECIAL_DAYS, SPECIAL_DAYS_HEADERS);
   getOrCreateSheet(ss, SHEET_NAMES.HOLIDAYS, HOLIDAYS_HEADERS);
   getOrCreateSheet(ss, SHEET_NAMES.CHANGE_LOG, CHANGE_LOG_HEADERS);
+  getOrCreateSheet(ss, SHEET_NAMES.CONTRACT_LOG, CONTRACT_LOG_HEADERS);
+  getOrCreateSheet(ss, SHEET_NAMES.AREA_MASTER, AREA_MASTER_HEADERS);
+  getOrCreateSheet(ss, SHEET_NAMES.AREA_EXCEPTION, AREA_EXCEPTION_HEADERS);
+
+  // 既存満車管理シートに新列がなければ追加
+  var mainSheet = ss.getSheetByName(SHEET_NAMES.MAIN);
+  var headerRow = mainSheet.getRange(1, 1, 1, mainSheet.getLastColumn()).getValues()[0];
+  if (headerRow.indexOf('満車確定日') === -1) {
+    var nextCol = headerRow.length + 1;
+    mainSheet.getRange(1, nextCol).setValue('満車確定日').setFontWeight('bold').setBackground('#4a86c8').setFontColor('#ffffff');
+    mainSheet.getRange(1, nextCol + 1).setValue('満車時件数').setFontWeight('bold').setBackground('#4a86c8').setFontColor('#ffffff');
+  }
 
   // デフォルトの曜日設定
   var daySheet = ss.getSheetByName(SHEET_NAMES.DAY_SETTINGS);
@@ -128,7 +154,6 @@ function setup() {
   }
 
   // サンプルデータ（直近の配送日30日分）
-  var mainSheet = ss.getSheetByName(SHEET_NAMES.MAIN);
   if (mainSheet.getLastRow() <= 1) {
     insertSampleData(mainSheet, ss);
   }
@@ -148,7 +173,6 @@ function insertSampleData(sheet, ss) {
   var count = 0;
   var maxDays = 30;
 
-  // 10日前から開始して30営業日分
   for (var i = -10; count < maxDays && i < 60; i++) {
     var d = new Date(today);
     d.setDate(d.getDate() + i);
@@ -157,13 +181,13 @@ function insertSampleData(sheet, ss) {
     var dayName = DAY_NAMES[dayIndex];
 
     var trucks = resolveTrucks(dateStr, dayIndex, daySettings, specialDaysMap);
-    if (trucks <= 0) continue; // 休業日スキップ
+    if (trucks <= 0) continue;
 
     var status = '受付中';
     var yesterdayCount = Math.floor(Math.random() * 15) + 5;
-    var yesterdayAmount = Math.floor(Math.random() * 500) + 100; // 千円単位
+    var yesterdayAmount = Math.floor(Math.random() * 500) + 100;
     var todayCount = Math.floor(Math.random() * 8);
-    var todayAmount = Math.floor(Math.random() * 300); // 千円単位
+    var todayAmount = Math.floor(Math.random() * 300);
 
     if (i < 0) {
       status = '締切済';
@@ -182,7 +206,7 @@ function insertSampleData(sheet, ss) {
       perTruckCount, perTruckAmount,
       yesterdayCount, yesterdayAmount,
       todayCount, todayAmount,
-      ''
+      '', '', ''
     ]);
     count++;
   }
@@ -203,23 +227,18 @@ function doGet() {
 
 // ==================== 自動30日生成 ====================
 
-/**
- * 今日から配送がある日を30日分自動取得。
- * 既にシートにある行はそのまま、無い行は新規作成。
- */
 function getNext30DeliveryDays() {
   var ss = getSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAMES.MAIN);
   var daySettings = getDaySettingsMap(ss);
   var specialDaysMap = getSpecialDaysMap(ss);
 
-  // 重複日付行を自動で統合・削除
   deduplicateMainSheet(sheet);
 
-  // 既存データをマップ化
   var existingMap = {};
+  var numCols = Math.max(sheet.getLastColumn(), MAIN_HEADERS.length);
   if (sheet.getLastRow() > 1) {
-    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, MAIN_HEADERS.length).getValues();
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
     for (var i = 0; i < data.length; i++) {
       var dateVal = data[i][0];
       var key = dateVal instanceof Date ? formatDate(dateVal) : String(dateVal);
@@ -236,7 +255,9 @@ function getNext30DeliveryDays() {
         yesterdayAmount: data[i][9],
         todayCount: data[i][10],
         todayAmount: data[i][11],
-        memo: data[i][12] || ''
+        memo: data[i][12] || '',
+        manshaDate: data[i][13] || '',
+        manshaCount: data[i][14] || ''
       };
     }
   }
@@ -253,7 +274,7 @@ function getNext30DeliveryDays() {
     var dayIndex = d.getDay();
 
     var trucks = resolveTrucks(dateStr, dayIndex, daySettings, specialDaysMap);
-    if (trucks <= 0) continue; // 休業日スキップ
+    if (trucks <= 0) continue;
 
     if (existingMap[dateStr]) {
       var row = existingMap[dateStr];
@@ -261,13 +282,13 @@ function getNext30DeliveryDays() {
       result.push(row);
     } else {
       var dayName = DAY_NAMES[dayIndex];
-      var newRow = [dateStr, dayName, trucks, '受付中', 0, 0, 0, 0, 0, 0, 0, 0, ''];
+      var newRow = [dateStr, dayName, trucks, '受付中', 0, 0, 0, 0, 0, 0, 0, 0, '', '', ''];
       sheet.appendRow(newRow);
       result.push({
         date: dateStr, dayName: dayName, trucks: trucks, status: '受付中',
         totalCount: 0, totalAmount: 0, perTruckCount: 0, perTruckAmount: 0,
         yesterdayCount: 0, yesterdayAmount: 0, todayCount: 0, todayAmount: 0,
-        memo: '', defaultTrucks: trucks
+        memo: '', manshaDate: '', manshaCount: '', defaultTrucks: trucks
       });
     }
     count++;
@@ -283,12 +304,12 @@ function getRows(startDate, endDate) {
   var sheet = ss.getSheetByName(SHEET_NAMES.MAIN);
   if (!sheet || sheet.getLastRow() <= 1) return [];
 
-  // 重複行があれば統合
   deduplicateMainSheet(sheet);
 
   var daySettings = getDaySettingsMap(ss);
   var specialDaysMap = getSpecialDaysMap(ss);
-  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, MAIN_HEADERS.length).getValues();
+  var numCols = Math.max(sheet.getLastColumn(), MAIN_HEADERS.length);
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
   var result = [];
 
   var start = startDate ? new Date(startDate) : null;
@@ -323,6 +344,8 @@ function getRows(startDate, endDate) {
       todayCount: row[10],
       todayAmount: row[11],
       memo: row[12] || '',
+      manshaDate: row[13] || '',
+      manshaCount: row[14] || '',
       defaultTrucks: defTrucks
     });
   }
@@ -331,10 +354,99 @@ function getRows(startDate, endDate) {
   return result;
 }
 
+// ==================== カレンダー用データ取得 ====================
+
+function getCalendarData(year, month) {
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAMES.MAIN);
+  var daySettings = getDaySettingsMap(ss);
+  var specialDaysMap = getSpecialDaysMap(ss);
+
+  // 月の初日と末日
+  var firstDay = new Date(year, month - 1, 1);
+  var lastDay = new Date(year, month, 0);
+  var startStr = formatDate(firstDay);
+  var endStr = formatDate(lastDay);
+
+  var rows = getRows(startStr, endStr);
+  var rowMap = {};
+  rows.forEach(function(r) { rowMap[r.date] = r; });
+
+  // 祝日・販促期間
+  var holidays = getHolidays();
+  var holidayDateSet = {};
+  var promoDateSet = {};
+  for (var h = 0; h < holidays.length; h++) {
+    var hol = holidays[h];
+    var hStart = new Date(hol.date);
+    var hEnd = hol.endDate ? new Date(hol.endDate) : hStart;
+    for (var dd = new Date(hStart); dd <= hEnd; dd.setDate(dd.getDate() + 1)) {
+      var ds = formatDate(dd);
+      if (hol.type === '祝日') holidayDateSet[ds] = hol.name;
+      else if (hol.type === '販促期間') promoDateSet[ds] = hol.name;
+    }
+  }
+
+  // 配送日を持つ日のセット
+  var deliveryDays = {};
+  for (var d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+    var ds2 = formatDate(d);
+    var di = d.getDay();
+    var trucks = resolveTrucks(ds2, di, daySettings, specialDaysMap);
+    if (trucks > 0) deliveryDays[ds2] = trucks;
+  }
+
+  // 全配送データから最短空きを計算（今日以降で受付中/注意の最も近い日）
+  var todayStr = formatDate(new Date());
+  var allRows = getRows(todayStr, null);
+  var nearestOpen = '';
+  for (var i = 0; i < allRows.length; i++) {
+    if (allRows[i].date >= todayStr && (allRows[i].status === '受付中' || allRows[i].status === '注意')) {
+      nearestOpen = allRows[i].date;
+      break;
+    }
+  }
+
+  var calDays = [];
+  for (var d2 = new Date(firstDay); d2 <= lastDay; d2.setDate(d2.getDate() + 1)) {
+    var ds3 = formatDate(d2);
+    var rowData = rowMap[ds3] || null;
+    var isDelivery = !!deliveryDays[ds3];
+    calDays.push({
+      date: ds3,
+      dayName: DAY_NAMES[d2.getDay()],
+      dayOfWeek: d2.getDay(),
+      isDelivery: isDelivery,
+      defaultTrucks: deliveryDays[ds3] || 0,
+      status: rowData ? rowData.status : (isDelivery ? '受付中' : ''),
+      trucks: rowData ? rowData.trucks : (deliveryDays[ds3] || 0),
+      totalCount: rowData ? rowData.totalCount : 0,
+      totalAmount: rowData ? rowData.totalAmount : 0,
+      perTruckCount: rowData ? rowData.perTruckCount : 0,
+      memo: rowData ? rowData.memo : '',
+      isHoliday: !!holidayDateSet[ds3],
+      holidayName: holidayDateSet[ds3] || '',
+      isPromo: !!promoDateSet[ds3],
+      promoName: promoDateSet[ds3] || '',
+      manshaDate: rowData ? (rowData.manshaDate || '') : '',
+      manshaCount: rowData ? (rowData.manshaCount || '') : ''
+    });
+  }
+
+  return {
+    year: year,
+    month: month,
+    days: calDays,
+    nearestOpen: nearestOpen,
+    today: todayStr
+  };
+}
+
 // ==================== セル保存 ====================
 
 function saveCell(date, column, value) {
-  var sheet = getSpreadsheet().getSheetByName(SHEET_NAMES.MAIN);
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAMES.MAIN);
   if (!sheet) throw new Error('満車管理シートが見つかりません');
 
   var rowIndex = findRowByDate(sheet, date);
@@ -362,8 +474,101 @@ function saveCell(date, column, value) {
   }
   sheet.getRange(rowIndex, colIndex).setValue(value);
 
+  // ステータスが「満車」に変わった場合、満車確定日と満車時件数を記録
+  if (column === 'status' && value === '満車' && oldValue !== '満車') {
+    var todayStr = formatDate(new Date());
+    var totalCount = Number(sheet.getRange(rowIndex, 5).getValue()) || 0;
+    sheet.getRange(rowIndex, 14).setValue(todayStr);
+    sheet.getRange(rowIndex, 15).setValue(totalCount);
+  }
+
   recalculateRow(sheet, rowIndex);
+
+  // 当日契約件数・金額が保存されたら契約履歴ログに記録
+  if (column === 'todayCount' || column === 'todayAmount') {
+    try {
+      recordContractLog(ss, sheet, rowIndex, date);
+    } catch(e) {}
+  }
+
   return getRowData(sheet, rowIndex);
+}
+
+// ==================== 契約履歴ログ自動記録 ====================
+
+function recordContractLog(ss, mainSheet, rowIndex, deliveryDate) {
+  var todayCount = Number(mainSheet.getRange(rowIndex, 11).getValue()) || 0;
+  var todayAmount = Number(mainSheet.getRange(rowIndex, 12).getValue()) || 0;
+
+  // 件数・金額が両方0なら記録しない
+  if (todayCount === 0 && todayAmount === 0) return;
+
+  var today = new Date();
+  var contractDateStr = formatDate(today);
+  var contractDayName = DAY_NAMES[today.getDay()];
+
+  var deliveryD = new Date(deliveryDate);
+  var deliveryDayName = DAY_NAMES[deliveryD.getDay()];
+  var leadTime = Math.round((deliveryD - today) / (1000 * 60 * 60 * 24));
+
+  // 販促フラグ
+  var holidays = getHolidays();
+  var promoDateSet = {};
+  for (var h = 0; h < holidays.length; h++) {
+    var hol = holidays[h];
+    if (hol.type !== '販促期間') continue;
+    var hStart = new Date(hol.date);
+    var hEnd = hol.endDate ? new Date(hol.endDate) : hStart;
+    for (var dd = new Date(hStart); dd <= hEnd; dd.setDate(dd.getDate() + 1)) {
+      promoDateSet[formatDate(dd)] = true;
+    }
+  }
+  var contractPromo = promoDateSet[contractDateStr] ? 1 : 0;
+  var deliveryPromo = promoDateSet[deliveryDate] ? 1 : 0;
+
+  // 最短空き日を検索
+  var todayStr = contractDateStr;
+  var allRows = getRows(todayStr, null);
+  var nearestOpen = '';
+  var nearestDays = '';
+  var nearestDayName = '';
+  for (var i = 0; i < allRows.length; i++) {
+    if (allRows[i].date >= todayStr && (allRows[i].status === '受付中' || allRows[i].status === '注意')) {
+      nearestOpen = allRows[i].date;
+      nearestDays = Math.round((new Date(allRows[i].date) - today) / (1000 * 60 * 60 * 24));
+      nearestDayName = allRows[i].dayName;
+      break;
+    }
+  }
+
+  var logSheet = getOrCreateSheet(ss, SHEET_NAMES.CONTRACT_LOG, CONTRACT_LOG_HEADERS);
+
+  // 同じ契約日×配送日が既存なら上書き
+  var existingRow = -1;
+  if (logSheet.getLastRow() > 1) {
+    var logData = logSheet.getRange(2, 1, logSheet.getLastRow() - 1, 4).getValues();
+    for (var j = 0; j < logData.length; j++) {
+      var ld = logData[j][0] instanceof Date ? formatDate(logData[j][0]) : String(logData[j][0]);
+      var dd2 = logData[j][3] instanceof Date ? formatDate(logData[j][3]) : String(logData[j][3]);
+      if (ld === contractDateStr && dd2 === deliveryDate) {
+        existingRow = j + 2;
+        break;
+      }
+    }
+  }
+
+  var rowData = [
+    contractDateStr, contractDayName, contractPromo,
+    deliveryDate, deliveryDayName, deliveryPromo,
+    leadTime, todayCount, todayAmount,
+    nearestOpen, nearestDays, nearestDayName
+  ];
+
+  if (existingRow > 0) {
+    logSheet.getRange(existingRow, 1, 1, rowData.length).setValues([rowData]);
+  } else {
+    logSheet.appendRow(rowData);
+  }
 }
 
 function recalculateRow(sheet, rowIndex) {
@@ -385,7 +590,8 @@ function recalculateRow(sheet, rowIndex) {
 }
 
 function getRowData(sheet, rowIndex) {
-  var row = sheet.getRange(rowIndex, 1, 1, MAIN_HEADERS.length).getValues()[0];
+  var numCols = Math.max(sheet.getLastColumn(), MAIN_HEADERS.length);
+  var row = sheet.getRange(rowIndex, 1, 1, numCols).getValues()[0];
   var dateVal = row[0] instanceof Date ? formatDate(row[0]) : String(row[0]);
   var rowDate = row[0] instanceof Date ? row[0] : new Date(row[0]);
   var ss = getSpreadsheet();
@@ -396,7 +602,8 @@ function getRowData(sheet, rowIndex) {
     date: dateVal, dayName: row[1], trucks: row[2], status: row[3],
     totalCount: row[4], totalAmount: row[5], perTruckCount: row[6], perTruckAmount: row[7],
     yesterdayCount: row[8], yesterdayAmount: row[9], todayCount: row[10], todayAmount: row[11],
-    memo: row[12] || '', defaultTrucks: defTrucks
+    memo: row[12] || '', manshaDate: row[13] || '', manshaCount: row[14] || '',
+    defaultTrucks: defTrucks
   };
 }
 
@@ -408,7 +615,6 @@ function addRow(date) {
 
   var existingRowIndex = findRowByDate(sheet, date);
   if (existingRowIndex !== -1) {
-    // 既に存在する場合はそのデータを返す（重複追加しない）
     return getRowData(sheet, existingRowIndex);
   }
 
@@ -416,13 +622,14 @@ function addRow(date) {
   var dayIndex = d.getDay();
   var dayName = DAY_NAMES[dayIndex];
   var trucks = getTrucksForDate(date);
-  var newRow = [date, dayName, trucks, '受付中', 0, 0, 0, 0, 0, 0, 0, 0, ''];
+  var newRow = [date, dayName, trucks, '受付中', 0, 0, 0, 0, 0, 0, 0, 0, '', '', ''];
   sheet.appendRow(newRow);
 
   return {
     date: date, dayName: dayName, trucks: trucks, status: '受付中',
     totalCount: 0, totalAmount: 0, perTruckCount: 0, perTruckAmount: 0,
-    yesterdayCount: 0, yesterdayAmount: 0, todayCount: 0, todayAmount: 0, memo: ''
+    yesterdayCount: 0, yesterdayAmount: 0, todayCount: 0, todayAmount: 0,
+    memo: '', manshaDate: '', manshaCount: ''
   };
 }
 
@@ -473,18 +680,16 @@ function getSpecialDaysMap(ss) {
 }
 
 function resolveTrucks(dateStr, dayIndex, daySettings, specialDaysMap) {
-  // 特別日設定が最優先
   if (specialDaysMap[dateStr]) {
     if (specialDaysMap[dateStr].type === '休業日') return 0;
     return specialDaysMap[dateStr].trucks;
   }
-  // 曜日設定
   var dayName = DAY_NAMES[dayIndex];
   if (daySettings[dayName]) {
     if (daySettings[dayName].enabled === '配送なし') return 0;
     return daySettings[dayName].trucks;
   }
-  return 3; // デフォルト
+  return 3;
 }
 
 // ==================== 曜日設定 ====================
@@ -540,9 +745,6 @@ function getSpecialDays() {
   }).sort(function(a, b) { return new Date(a.date) - new Date(b.date); });
 }
 
-/**
- * 特別日を保存。startDate〜endDate の範囲指定で連休を一括登録可能。
- */
 function saveSpecialDay(data) {
   var sheet = getSpreadsheet().getSheetByName(SHEET_NAMES.SPECIAL_DAYS);
   if (!sheet) throw new Error('特別日設定シートが見つかりません');
@@ -617,10 +819,6 @@ function deleteHoliday(date, name) {
   return { success: true };
 }
 
-/**
- * 祝日・販促期間データを一括インポート（Excel/CSV貼り付け用）
- * rows: [{date, endDate, type, name, memo}, ...]
- */
 function importHolidays(rows) {
   var sheet = getSpreadsheet().getSheetByName(SHEET_NAMES.HOLIDAYS);
   if (!sheet) throw new Error('祝日・販促期間シートが見つかりません');
@@ -635,19 +833,116 @@ function importHolidays(rows) {
   return { success: true, count: imported };
 }
 
-// ==================== 分析データ取得 ====================
+// ==================== エリアマスタ ====================
 
-/**
- * 分析用データを取得。各行に曜日区分・祝日フラグ・販促期間フラグを付与。
- */
+function getAreas() {
+  var sheet = getSpreadsheet().getSheetByName(SHEET_NAMES.AREA_MASTER);
+  if (!sheet || sheet.getLastRow() <= 1) return [];
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+  return data.map(function(row) {
+    return { areaId: row[0], areaName: row[1], deliveryDays: row[2] || '', memo: row[3] || '' };
+  });
+}
+
+function saveArea(data) {
+  var ss = getSpreadsheet();
+  var sheet = getOrCreateSheet(ss, SHEET_NAMES.AREA_MASTER, AREA_MASTER_HEADERS);
+
+  // 既存チェック
+  if (sheet.getLastRow() > 1) {
+    var existing = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+    for (var i = 0; i < existing.length; i++) {
+      if (String(existing[i][0]) === String(data.areaId)) {
+        sheet.getRange(i + 2, 1, 1, 4).setValues([[data.areaId, data.areaName, data.deliveryDays || '', data.memo || '']]);
+        return { success: true };
+      }
+    }
+  }
+  sheet.appendRow([data.areaId, data.areaName, data.deliveryDays || '', data.memo || '']);
+  return { success: true };
+}
+
+function deleteArea(areaId) {
+  var sheet = getSpreadsheet().getSheetByName(SHEET_NAMES.AREA_MASTER);
+  if (!sheet || sheet.getLastRow() <= 1) return { success: true };
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+  for (var i = data.length - 1; i >= 0; i--) {
+    if (String(data[i][0]) === String(areaId)) { sheet.deleteRow(i + 2); break; }
+  }
+  return { success: true };
+}
+
+// ==================== エリア例外設定 ====================
+
+function getAreaExceptions() {
+  var sheet = getSpreadsheet().getSheetByName(SHEET_NAMES.AREA_EXCEPTION);
+  if (!sheet || sheet.getLastRow() <= 1) return [];
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+  // 直近3ヶ月分のみ
+  var cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 3);
+  return data.map(function(row) {
+    var dateVal = row[0] instanceof Date ? formatDate(row[0]) : String(row[0]);
+    return { date: dateVal, areaId: row[1], exceptionType: row[2], reason: row[3] || '' };
+  }).filter(function(r) {
+    return new Date(r.date) >= cutoff;
+  }).sort(function(a, b) { return new Date(a.date) - new Date(b.date); });
+}
+
+function saveAreaException(data) {
+  var ss = getSpreadsheet();
+  var sheet = getOrCreateSheet(ss, SHEET_NAMES.AREA_EXCEPTION, AREA_EXCEPTION_HEADERS);
+  sheet.appendRow([data.date, data.areaId, data.exceptionType, data.reason || '']);
+  return { success: true };
+}
+
+function deleteAreaException(date, areaId) {
+  var sheet = getSpreadsheet().getSheetByName(SHEET_NAMES.AREA_EXCEPTION);
+  if (!sheet || sheet.getLastRow() <= 1) return { success: true };
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues();
+  for (var i = data.length - 1; i >= 0; i--) {
+    var d = data[i][0] instanceof Date ? formatDate(data[i][0]) : String(data[i][0]);
+    if (d === date && String(data[i][1]) === String(areaId)) { sheet.deleteRow(i + 2); break; }
+  }
+  return { success: true };
+}
+
+// ==================== 契約履歴ログ取得 ====================
+
+function getContractLogs(limit) {
+  var sheet = getSpreadsheet().getSheetByName(SHEET_NAMES.CONTRACT_LOG);
+  if (!sheet || sheet.getLastRow() <= 1) return [];
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, CONTRACT_LOG_HEADERS.length).getValues();
+  var result = data.map(function(row) {
+    return {
+      contractDate: row[0] instanceof Date ? formatDate(row[0]) : String(row[0]),
+      contractDay: row[1],
+      contractPromo: row[2],
+      deliveryDate: row[3] instanceof Date ? formatDate(row[3]) : String(row[3]),
+      deliveryDay: row[4],
+      deliveryPromo: row[5],
+      leadTime: row[6],
+      count: row[7],
+      amount: row[8],
+      nearestOpen: row[9] instanceof Date ? formatDate(row[9]) : String(row[9]),
+      nearestDays: row[10],
+      nearestDay: row[11]
+    };
+  });
+  result.sort(function(a, b) { return new Date(b.contractDate) - new Date(a.contractDate); });
+  if (limit && limit > 0) result = result.slice(0, limit);
+  return result;
+}
+
+// ==================== 拡張分析データ取得 ====================
+
 function getAnalysisData(startDate, endDate) {
   var rows = getRows(startDate, endDate);
-  if (rows.length === 0) return { rows: [], holidays: [] };
+  if (rows.length === 0) return { rows: [], holidays: [], contractLogs: [] };
 
-  // 祝日・販促期間マップ作成
   var holidays = getHolidays();
-  var holidayDateSet = {};  // 祝日の日付セット
-  var promoDateSet = {};    // 販促期間の日付セット
+  var holidayDateSet = {};
+  var promoDateSet = {};
 
   for (var h = 0; h < holidays.length; h++) {
     var hol = holidays[h];
@@ -663,7 +958,6 @@ function getAnalysisData(startDate, endDate) {
     }
   }
 
-  // 各行にフラグ付与
   var enriched = rows.map(function(r) {
     var dayIndex = new Date(r.date).getDay();
     var isWeekend = (dayIndex === 0 || dayIndex === 6);
@@ -688,7 +982,9 @@ function getAnalysisData(startDate, endDate) {
       yesterdayAmount: Number(r.yesterdayAmount) || 0,
       todayCount: Number(r.todayCount) || 0,
       todayAmount: Number(r.todayAmount) || 0,
-      // 重回帰用の説明変数
+      manshaDate: r.manshaDate || '',
+      manshaCount: Number(r.manshaCount) || 0,
+      status: r.status,
       dayOfWeek: dayIndex,
       weekendFlag: isWeekend ? 1 : 0,
       holidayFlag: isHoliday ? 1 : 0,
@@ -696,7 +992,74 @@ function getAnalysisData(startDate, endDate) {
     };
   });
 
-  return { rows: enriched, holidays: holidays };
+  var contractLogs = getContractLogs();
+
+  return { rows: enriched, holidays: holidays, contractLogs: contractLogs };
+}
+
+// ==================== 予測用データ取得 ====================
+
+function getPredictionData(deliveryDate) {
+  var ss = getSpreadsheet();
+  var d = new Date(deliveryDate);
+  var dayIndex = d.getDay();
+  var dayName = DAY_NAMES[dayIndex];
+  var daySettings = getDaySettingsMap(ss);
+  var specialDaysMap = getSpecialDaysMap(ss);
+  var trucks = resolveTrucks(deliveryDate, dayIndex, daySettings, specialDaysMap);
+
+  // 販促判定
+  var holidays = getHolidays();
+  var promoDateSet = {};
+  for (var h = 0; h < holidays.length; h++) {
+    var hol = holidays[h];
+    if (hol.type !== '販促期間') continue;
+    var hStart = new Date(hol.date);
+    var hEnd = hol.endDate ? new Date(hol.endDate) : hStart;
+    for (var dd = new Date(hStart); dd <= hEnd; dd.setDate(dd.getDate() + 1)) {
+      promoDateSet[formatDate(dd)] = true;
+    }
+  }
+  var isPromo = !!promoDateSet[deliveryDate];
+  var isWeekend = (dayIndex === 0 || dayIndex === 6);
+
+  // 過去の同条件データ
+  var allRows = getRows(null, null);
+  var similar = [];
+  for (var i = 0; i < allRows.length; i++) {
+    var r = allRows[i];
+    if (r.date >= deliveryDate) continue;
+    var rDate = new Date(r.date);
+    var rIsWeekend = (rDate.getDay() === 0 || rDate.getDay() === 6);
+    var rIsPromo = !!promoDateSet[r.date];
+    // 同条件: 同曜日区分 & 台数が±1以内
+    if (rIsWeekend === isWeekend && rIsPromo === isPromo &&
+        Math.abs(Number(r.trucks) - trucks) <= 1 &&
+        Number(r.totalCount) > 0) {
+      similar.push(r);
+    }
+  }
+
+  // 満車タイミング（同条件で満車確定日がある日のリードタイム）
+  var manshaLeadTimes = [];
+  for (var j = 0; j < similar.length; j++) {
+    if (similar[j].manshaDate) {
+      var mDate = new Date(similar[j].manshaDate);
+      var dDate = new Date(similar[j].date);
+      var lt = Math.round((dDate - mDate) / (1000 * 60 * 60 * 24));
+      if (lt >= 0) manshaLeadTimes.push(lt);
+    }
+  }
+
+  return {
+    dayName: dayName,
+    dayIndex: dayIndex,
+    trucks: trucks,
+    isPromo: isPromo,
+    isWeekend: isWeekend,
+    similarRows: similar.sort(function(a, b) { return new Date(b.date) - new Date(a.date); }).slice(0, 30),
+    manshaLeadTimes: manshaLeadTimes
+  };
 }
 
 // ==================== CSVエクスポート ====================
@@ -707,7 +1070,7 @@ function exportCSV(startDate, endDate) {
 
   var headers = ['配送日', '曜日', '台数', 'ステータス', '合計件数', '合計金額(千円)',
     '1台あたり件数', '1台あたり金額(千円)', '昨日までの合計件数', '昨日までの合計金額(千円)',
-    '当日契約件数', '当日契約金額(千円)', '備考'];
+    '当日契約件数', '当日契約金額(千円)', '備考', '満車確定日', '満車時件数'];
 
   var csv = headers.join(',') + '\n';
   rows.forEach(function(r) {
@@ -717,7 +1080,8 @@ function exportCSV(startDate, endDate) {
       r.perTruckCount, r.perTruckAmount,
       r.yesterdayCount, r.yesterdayAmount,
       r.todayCount, r.todayAmount,
-      '"' + (r.memo || '').replace(/"/g, '""') + '"'
+      '"' + (r.memo || '').replace(/"/g, '""') + '"',
+      r.manshaDate || '', r.manshaCount || ''
     ].join(',') + '\n';
   });
   return csv;
@@ -763,15 +1127,11 @@ function findRowByDate(sheet, date) {
   return -1;
 }
 
-/**
- * 満車管理シートの重複日付行を統合・削除する。
- * 同じ日付が複数行ある場合、データが入っている行を優先して残し、空の重複行を削除。
- * 両方にデータがある場合は最初の行を残す。
- */
 function deduplicateMainSheet(sheet) {
   if (sheet.getLastRow() <= 1) return;
-  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, MAIN_HEADERS.length).getValues();
-  var dateMap = {}; // dateStr -> { bestIdx, deleteIndices }
+  var numCols = Math.max(sheet.getLastColumn(), MAIN_HEADERS.length);
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
+  var dateMap = {};
 
   for (var i = 0; i < data.length; i++) {
     var dateVal = data[i][0];
@@ -781,44 +1141,36 @@ function deduplicateMainSheet(sheet) {
     if (!dateMap[key]) {
       dateMap[key] = { bestIdx: i, deleteIndices: [] };
     } else {
-      // 重複発見: データが多い方を残す
       var existingRow = data[dateMap[key].bestIdx];
       var currentRow = data[i];
       var existingScore = rowDataScore(existingRow);
       var currentScore = rowDataScore(currentRow);
 
       if (currentScore > existingScore) {
-        // 新しい方がデータが多い → 既存を削除対象に
         dateMap[key].deleteIndices.push(dateMap[key].bestIdx);
         dateMap[key].bestIdx = i;
       } else {
-        // 既存を残す → 新しい方を削除対象に
         dateMap[key].deleteIndices.push(i);
       }
     }
   }
 
-  // 削除対象行を収集し、降順でソート（後ろから削除することでインデックスがずれない）
   var rowsToDelete = [];
   for (var k in dateMap) {
     for (var j = 0; j < dateMap[k].deleteIndices.length; j++) {
-      rowsToDelete.push(dateMap[k].deleteIndices[j] + 2); // シート上の行番号（1-indexed, ヘッダー分+1）
+      rowsToDelete.push(dateMap[k].deleteIndices[j] + 2);
     }
   }
 
   if (rowsToDelete.length === 0) return;
 
-  rowsToDelete.sort(function(a, b) { return b - a; }); // 降順
+  rowsToDelete.sort(function(a, b) { return b - a; });
   for (var d = 0; d < rowsToDelete.length; d++) {
     sheet.deleteRow(rowsToDelete[d]);
   }
 }
 
-/**
- * 行のデータ充実度をスコア化。数値列の合計で判定。
- */
 function rowDataScore(row) {
-  // trucks(2) + totalCount(4) + totalAmount(5) + yesterdayCount(8) + yesterdayAmount(9) + todayCount(10) + todayAmount(11)
   return (Number(row[2]) || 0) + (Number(row[4]) || 0) + (Number(row[5]) || 0) +
          (Number(row[8]) || 0) + (Number(row[9]) || 0) + (Number(row[10]) || 0) + (Number(row[11]) || 0);
 }

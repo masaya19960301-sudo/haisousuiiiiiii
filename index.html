@@ -10,8 +10,8 @@ html{font-size:14px}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;background:#f0f2f5;color:#1a1a1a;line-height:1.5}
 .app-header{background:linear-gradient(135deg,#1e3a5f,#2d5986);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .app-header h1{font-size:1.2rem;font-weight:600}
-.tab-bar{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;padding:0 16px}
-.tab-btn{padding:12px 24px;border:none;background:none;cursor:pointer;font-size:.95rem;font-weight:500;color:#666;border-bottom:3px solid transparent;transition:all .2s;min-height:44px}
+.tab-bar{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;padding:0 16px;overflow-x:auto}
+.tab-btn{padding:12px 24px;border:none;background:none;cursor:pointer;font-size:.95rem;font-weight:500;color:#666;border-bottom:3px solid transparent;transition:all .2s;min-height:44px;white-space:nowrap}
 .tab-btn:hover{color:#1e3a5f;background:#f5f8fc}
 .tab-btn.active{color:#1e3a5f;border-bottom-color:#1e3a5f;font-weight:600}
 .tab-content{display:none;padding:16px}
@@ -130,7 +130,48 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
 .dialog-actions .confirm{background:#d32f2f;color:#fff}
 .dialog-actions .primary{background:#1e3a5f;color:#fff}
 .unit-label{font-size:.7rem;color:#ccc;margin-left:2px}
-@media(max-width:768px){html{font-size:13px}.controls-bar{padding:8px 12px}.tab-btn{padding:10px 14px;font-size:.85rem}.summary-bar{gap:10px;font-size:.8rem}}
+/* カレンダー */
+.cal-nav{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.cal-nav h3{font-size:1.1rem;min-width:160px;text-align:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.cal-header{background:#2d5986;color:#fff;padding:8px 4px;text-align:center;font-weight:600;font-size:.85rem}
+.cal-header.sun{background:#c62828}
+.cal-header.sat{background:#1565c0}
+.cal-day{min-height:90px;padding:4px;border:1px solid #eee;cursor:pointer;position:relative;font-size:.75rem;transition:box-shadow .2s}
+.cal-day:hover{box-shadow:inset 0 0 0 2px #1a73e8}
+.cal-day.empty{background:#fafafa;cursor:default}
+.cal-day.empty:hover{box-shadow:none}
+.cal-day .day-num{font-weight:700;font-size:.9rem;margin-bottom:2px}
+.cal-day.today{box-shadow:inset 0 0 0 3px #1a73e8}
+.cal-day.week-zone{background:rgba(255,0,0,.04)}
+.cal-day.nearest-open .day-num::after{content:'★';color:#ff9800;margin-left:2px}
+.cal-day.st-受付中{background:linear-gradient(135deg,#e8f5e9,#fff)}
+.cal-day.st-注意{background:linear-gradient(135deg,#fff8e1,#fff)}
+.cal-day.st-満車{background:linear-gradient(135deg,#fff3e0,#fff)}
+.cal-day.st-締切済{background:linear-gradient(135deg,#f5f5f5,#fff)}
+.cal-day.no-delivery{background:#f9f9f9;background-image:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(0,0,0,.03) 5px,rgba(0,0,0,.03) 10px)}
+.cal-day .cal-status{font-size:.65rem;font-weight:600;padding:1px 4px;border-radius:4px;display:inline-block;margin-bottom:1px}
+.cal-day .cal-info{color:#555;line-height:1.3}
+.cal-day .cal-promo{font-size:.6rem;color:#e65100;font-weight:600}
+/* ヒートマップ */
+.heatmap-table{width:100%;border-collapse:collapse;margin-top:12px}
+.heatmap-table th,.heatmap-table td{padding:12px;border:1px solid #e0e0e0;text-align:center;font-size:.9rem}
+.heatmap-table th{background:#37474f;color:#fff}
+.heatmap-cell{font-weight:700;border-radius:4px}
+.heatmap-cell.insufficient{background:#e0e0e0;color:#999;font-weight:400}
+/* グラフ（Canvas/SVG代わりにdivベースの簡易グラフ） */
+.chart-container{position:relative;height:300px;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;margin-top:12px;overflow:hidden}
+.chart-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:.8rem}
+.chart-legend-item{display:flex;align-items:center;gap:4px}
+.chart-legend-item .swatch{width:12px;height:12px;border-radius:2px}
+.scatter-container{position:relative;height:300px;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;margin-top:12px;padding:30px 50px 40px 60px}
+.scatter-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:#1e3a5f;transform:translate(-50%,-50%)}
+.scatter-label{position:absolute;font-size:.7rem;color:#999}
+.insight-box{margin-top:12px;padding:16px;background:#e8f0fe;border-radius:8px;font-size:.9rem;border-left:4px solid #1e3a5f}
+.area-table{width:100%;border-collapse:collapse;margin-top:12px}
+.area-table th,.area-table td{padding:8px 12px;border:1px solid #e0e0e0;text-align:center}
+.area-table th{background:#f5f8fc;font-weight:500}
+@media(max-width:768px){html{font-size:13px}.controls-bar{padding:8px 12px}.tab-btn{padding:10px 14px;font-size:.85rem}.summary-bar{gap:10px;font-size:.8rem}.cal-day{min-height:60px}}
 </style>
 </head>
 <body>
@@ -140,6 +181,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
 </div>
 <div class="tab-bar">
   <button class="tab-btn active" data-tab="main">満車管理表</button>
+  <button class="tab-btn" data-tab="calendar">カレンダー</button>
   <button class="tab-btn" data-tab="settings">設定</button>
   <button class="tab-btn" data-tab="data">データ確認</button>
   <button class="tab-btn" data-tab="analysis">分析</button>
@@ -184,7 +226,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
   </div>
 </div>
 
-<!-- タブ2: 設定 -->
+<!-- タブ2: カレンダー -->
+<div id="tab-calendar" class="tab-content">
+  <div class="cal-nav">
+    <button class="quick-btn" onclick="calPrevMonth()">◀ 前月</button>
+    <button class="quick-btn" onclick="calThisMonth()">今月</button>
+    <button class="quick-btn" onclick="calNextMonth()">翌月 ▶</button>
+    <h3 id="calTitle">-</h3>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+</div>
+
+<!-- タブ3: 設定 -->
 <div id="tab-settings" class="tab-content">
   <div class="settings-section">
     <h3>目標設定（1台あたり）</h3>
@@ -247,9 +300,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
       </table>
     </div>
   </div>
+  <div class="settings-section">
+    <h3>エリア管理</h3>
+    <div class="special-day-form">
+      <div class="field"><label>エリアID</label><input type="text" id="areaId" style="width:80px" placeholder="A01"></div>
+      <div class="field"><label>エリア名</label><input type="text" id="areaName" style="width:140px" placeholder="横浜北部"></div>
+      <div class="field"><label>通常配送曜日</label><input type="text" id="areaDeliveryDays" style="width:140px" placeholder="月,水,金"></div>
+      <div class="field"><label>備考</label><input type="text" id="areaMemo" style="width:140px"></div>
+      <button class="save-btn" onclick="saveAreaUI()" style="margin-top:0">追加/更新</button>
+    </div>
+    <div class="table-wrapper">
+      <table class="area-table">
+        <thead><tr><th>ID</th><th>エリア名</th><th>配送曜日</th><th>備考</th><th>操作</th></tr></thead>
+        <tbody id="areaBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>エリア例外設定</h3>
+    <div class="special-day-form">
+      <div class="field"><label>日付</label><input type="date" id="areaExDate"></div>
+      <div class="field"><label>エリアID</label><input type="text" id="areaExAreaId" style="width:80px" placeholder="A01"></div>
+      <div class="field"><label>種別</label>
+        <select id="areaExType"><option value="配送あり">配送あり</option><option value="配送なし">配送なし</option></select>
+      </div>
+      <div class="field"><label>理由</label><input type="text" id="areaExReason" style="width:160px"></div>
+      <button class="save-btn" onclick="saveAreaExUI()" style="margin-top:0">追加</button>
+    </div>
+    <div class="table-wrapper">
+      <table class="area-table">
+        <thead><tr><th>日付</th><th>エリアID</th><th>種別</th><th>理由</th><th>操作</th></tr></thead>
+        <tbody id="areaExBody"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
-<!-- タブ3: データ確認 -->
+<!-- タブ4: データ確認 -->
 <div id="tab-data" class="tab-content">
   <div class="settings-section">
     <h3>過去データ閲覧・エクスポート</h3>
@@ -281,7 +368,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
   </div>
 </div>
 
-<!-- タブ4: 分析 -->
+<!-- タブ5: 分析 -->
 <div id="tab-analysis" class="tab-content">
   <div class="analysis-section">
     <h3>分析期間</h3>
@@ -295,6 +382,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
     <h3>概要サマリー</h3>
     <div class="stat-cards" id="statCards"></div>
   </div>
+  <div class="analysis-section" id="heatmapSection" style="display:none">
+    <h3>条件別 平均件数ヒートマップ</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:8px">縦軸:曜日 / 横軸:販促/通常 / N&lt;3のセルはグレーアウト</p>
+    <div class="export-controls" style="margin-bottom:8px">
+      <label>台数フィルタ:</label>
+      <select id="heatmapTrucksFilter" onchange="renderHeatmap()">
+        <option value="all">全台数</option>
+        <option value="2">2台</option><option value="3">3台</option>
+        <option value="4">4台</option><option value="5">5台</option>
+      </select>
+    </div>
+    <div id="heatmapContainer"></div>
+  </div>
   <div class="analysis-section" id="comparisonSection" style="display:none">
     <h3>曜日区分別 契約傾向比較</h3>
     <div class="table-wrapper"><table class="comparison-table" id="comparisonTable">
@@ -302,32 +402,41 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','No
       <tbody id="comparisonBody"></tbody>
     </table></div>
   </div>
+  <div class="analysis-section" id="manshaSpeedSection" style="display:none">
+    <h3>満車スピード分析</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:8px">配送日までのリードタイム別の累積件数パターン</p>
+    <div id="manshaSpeedContainer"></div>
+  </div>
+  <div class="analysis-section" id="manshaWaveSection" style="display:none">
+    <h3>満車波及分析</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:8px">満車日数が多い時期の翌期間の件数増加傾向</p>
+    <div id="manshaWaveContainer"></div>
+  </div>
   <div class="analysis-section" id="regressionSection" style="display:none">
     <h3>重回帰分析 結果</h3>
     <p style="font-size:.82rem;color:#888;margin-bottom:8px">目的変数: 1台あたり件数 / 説明変数: 台数, 土日, 祝日, 販促</p>
     <div class="regression-result" id="regressionResult"></div>
-    <h4 style="margin-top:20px;font-size:.95rem">予測シミュレーション</h4>
-    <div class="prediction-form">
-      <div class="field"><label>台数</label><input type="number" id="predTrucks" value="3" min="1"></div>
-      <div class="field"><label>曜日区分</label>
-        <select id="predDayType"><option value="平日">平日</option><option value="土日">土日</option><option value="祝日">祝日</option></select>
-      </div>
-      <div class="field"><label>販促期間</label>
-        <select id="predPromo"><option value="0">なし</option><option value="1">あり</option></select>
-      </div>
-      <button class="save-btn" onclick="runPrediction()" style="margin-top:0">予測</button>
-    </div>
-    <div class="prediction-result" id="predictionResult" style="display:none"></div>
   </div>
   <div class="analysis-section" id="regressionAmountSection" style="display:none">
     <h3>重回帰分析 結果（金額）</h3>
     <p style="font-size:.82rem;color:#888;margin-bottom:8px">目的変数: 1台あたり金額(千円) / 説明変数: 台数, 土日, 祝日, 販促</p>
     <div class="regression-result" id="regressionAmountResult"></div>
   </div>
+  <div class="analysis-section" id="predictionSection" style="display:none">
+    <h3>配送日予測</h3>
+    <div class="prediction-form">
+      <div class="field"><label>配送日</label><input type="date" id="predDate"></div>
+      <div class="field"><label>台数（自動取得）</label><input type="number" id="predTrucks" value="3" min="1"></div>
+      <div class="field"><label>販促期間</label>
+        <select id="predPromo"><option value="auto">自動判定</option><option value="0">なし</option><option value="1">あり</option></select>
+      </div>
+      <button class="save-btn" onclick="runPrediction2()" style="margin-top:0">予測</button>
+    </div>
+    <div id="predictionResult2" style="display:none"></div>
+  </div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
-
 <script>
 // ==================== グローバル状態 ====================
 var tableData = [];
@@ -341,20 +450,20 @@ var regressionModel = null;
 var regressionAmountModel = null;
 var holidayDateSet = {};
 var targets = {targetCount:0,targetAmount:0};
+var analysisRows = [];
+var analysisContractLogs = [];
+var calYear, calMonth;
 
 // 列定義 (新しい表示順)
-// 0:date 1:dayName 2:perTruckCount 3:perTruckAmount 4:totalCount 5:totalAmount
-// 6:trucks 7:status 8:yesterdayCount 9:yesterdayAmount 10:todayCount 11:todayAmount 12:memo
 var DISPLAY_KEYS = ['date','dayName','perTruckCount','perTruckAmount','totalCount','totalAmount','trucks','status','yesterdayCount','yesterdayAmount','todayCount','todayAmount','memo'];
-var EDITABLE_DISP = [6,7,8,9,10,11,12]; // trucks,status,yestC,yestA,todayC,todayA,memo
-var NUMERIC_DISP = [6,8,9,10,11]; // trucks + editable numerics
-var CALC_DISP = [2,3,4,5]; // perTruckCount,perTruckAmount,totalCount,totalAmount
-var HIGHLIGHT_DISP = [2,3]; // 1台あたり
+var EDITABLE_DISP = [6,7,8,9,10,11,12];
+var NUMERIC_DISP = [6,8,9,10,11];
+var CALC_DISP = [2,3,4,5];
+var HIGHLIGHT_DISP = [2,3];
 var STATUS_DISP = 7;
 var TRUCKS_DISP = 6;
 var MEMO_DISP = 12;
 var NUM_COLS = 13;
-
 var DISP_SAVE_KEYS = {6:'trucks',7:'status',8:'yesterdayCount',9:'yesterdayAmount',10:'todayCount',11:'todayAmount',12:'memo'};
 
 // ==================== 初期化 ====================
@@ -366,10 +475,13 @@ document.addEventListener('DOMContentLoaded', function(){
   loadTargets();
   loadNext30();
   var now = new Date();
+  calYear=now.getFullYear();calMonth=now.getMonth()+1;
   document.getElementById('exportStartDate').value = fmtDate(new Date(now.getFullYear(),now.getMonth(),1));
   document.getElementById('exportEndDate').value = fmtDate(new Date(now.getFullYear(),now.getMonth()+1,0));
   document.getElementById('analysisStartDate').value = fmtDate(new Date(now.getFullYear(),now.getMonth()-3,1));
   document.getElementById('analysisEndDate').value = fmtDate(now);
+  var tmr=new Date();tmr.setDate(tmr.getDate()+14);
+  document.getElementById('predDate').value=fmtDate(tmr);
 });
 
 function updateDateTime(){
@@ -385,8 +497,9 @@ function initTabs(){
       document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active')});
       btn.classList.add('active');
       document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-      if(btn.dataset.tab==='settings'){loadDaySettings();loadSpecialDays();loadHolidays();loadTargets();}
+      if(btn.dataset.tab==='settings'){loadDaySettings();loadSpecialDays();loadHolidays();loadTargets();loadAreas();loadAreaExceptions();}
       else if(btn.dataset.tab==='data'){loadExportData();loadChangeLog();}
+      else if(btn.dataset.tab==='calendar'){loadCalendar();}
     });
   });
 }
@@ -445,12 +558,10 @@ function renderTable(){
     var isHol=!!holidayDateSet[row.date];
     tr.className=classes.join(' ');
 
-    // 表示順に値を並べる
     var vals=DISPLAY_KEYS.map(function(k){return row[k]});
 
     for(var ci=0;ci<NUM_COLS;ci++){
       var td=document.createElement('td');
-      // 配送日・曜日列のみ土日祝の色付け
       if(ci<=1){
         if(isHol||isSun)td.classList.add(isHol?'holiday-cell':'sunday-cell');
         else if(isSat)td.classList.add('saturday-cell');
@@ -468,17 +579,14 @@ function renderTable(){
       if(isCalc&&!isHL)cell.classList.add('calc-col');
       if(isHL)cell.classList.add('highlight-cell');
 
-      // テキスト配置
       if(ci===0||ci===MEMO_DISP)cell.classList.add('text-left');
       else if(ci===1||ci===STATUS_DISP)cell.classList.add('text-center');
 
       var val=vals[ci];
 
-      // ステータスバッジ
       if(ci===STATUS_DISP){
         cell.innerHTML='<span class="status-badge status-'+val+'">'+val+'</span>';
       }
-      // 台数の色分け
       else if(ci===TRUCKS_DISP){
         cell.textContent=fmtNum(val);
         var defT=Number(row.defaultTrucks)||0;
@@ -486,17 +594,14 @@ function renderTable(){
         if(defT>0&&curT>defT)cell.classList.add('trucks-over');
         else if(defT>0&&curT<defT)cell.classList.add('trucks-under');
       }
-      // 1台あたり件数: 目標超えで赤（小数点1桁表示）
       else if(ci===2){
         cell.textContent=(val!==null&&val!==undefined&&val!==''&&val!==0)?Number(val).toFixed(1):'';
         if(targets.targetCount>0&&Number(val)>=targets.targetCount)cell.classList.add('over-target');
       }
-      // 1台あたり金額: 目標超えで赤
       else if(ci===3){
         cell.textContent=fmtNum(val);
         if(targets.targetAmount>0&&Number(val)>=targets.targetAmount)cell.classList.add('over-target');
       }
-      // 当日件数・金額: 0なら非表示
       else if(ci===10||ci===11){
         cell.textContent=(Number(val)||0)===0?'':fmtNum(val);
       }
@@ -540,7 +645,6 @@ function startEdit(r,c,overwrite){
   var inp=document.createElement('input');
   inp.className='cell-input';
   if(c===MEMO_DISP)inp.classList.add('text-left');
-  // text型を使う（number型は矢印キーが干渉するため）
   inp.type='text';
   if(NUMERIC_DISP.indexOf(c)!==-1)inp.inputMode='numeric';
   inp.value=overwrite?'':String(cur);
@@ -575,7 +679,6 @@ function cancelEdit(){
 function refreshCellDisplay(r,c){
   var cell=getCellEl(r,c);if(!cell)return;
   var key=DISPLAY_KEYS[c],val=tableData[r][key];
-  // 一旦クラスリセット
   cell.classList.remove('trucks-over','trucks-under','over-target');
   if(c===STATUS_DISP)cell.innerHTML='<span class="status-badge status-'+val+'">'+val+'</span>';
   else if(c===TRUCKS_DISP){
@@ -627,7 +730,6 @@ document.addEventListener('keydown',function(e){
   }
 });
 
-// 編集中キーハンドラ: 全矢印キーで確定+移動
 function onEditKeyDown(e){
   var r=editingCell?editingCell.row:focusedCell.row;
   var c=editingCell?editingCell.col:focusedCell.col;
@@ -668,7 +770,7 @@ function selectStatus(r,status){
   if(old===status){refreshCellDisplay(r,STATUS_DISP);return}
   pushUndo(r,'status',old,status);tableData[r].status=status;refreshCellDisplay(r,STATUS_DISP);
   var cell=getCellEl(r,STATUS_DISP);if(cell)cell.classList.add('saving');
-  google.script.run.withSuccessHandler(function(){if(cell)cell.classList.remove('saving')})
+  google.script.run.withSuccessHandler(function(ur){if(cell)cell.classList.remove('saving');if(ur){tableData[r]=ur;refreshRow(r)}})
     .withFailureHandler(function(e){if(cell){cell.classList.remove('saving');cell.classList.add('error')}showToast('保存エラー','error')})
     .saveCell(tableData[r].date,'status',status);
 }
@@ -714,6 +816,97 @@ function doDeleteRow(date){
     .withFailureHandler(function(e){showToast('削除エラー','error')}).deleteRow(date);
 }
 
+// ==================== カレンダー ====================
+function loadCalendar(){
+  google.script.run.withSuccessHandler(function(data){renderCalendar(data)})
+    .withFailureHandler(function(e){showToast('カレンダーエラー','error')})
+    .getCalendarData(calYear,calMonth);
+}
+function calPrevMonth(){calMonth--;if(calMonth<1){calMonth=12;calYear--}loadCalendar()}
+function calThisMonth(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth()+1;loadCalendar()}
+function calNextMonth(){calMonth++;if(calMonth>12){calMonth=1;calYear++}loadCalendar()}
+
+function renderCalendar(data){
+  document.getElementById('calTitle').textContent=data.year+'年'+data.month+'月';
+  var grid=document.getElementById('calGrid');grid.innerHTML='';
+
+  var dayHeaders=['日','月','火','水','木','金','土'];
+  dayHeaders.forEach(function(d,i){
+    var h=document.createElement('div');h.className='cal-header'+(i===0?' sun':'')+(i===6?' sat':'');
+    h.textContent=d;grid.appendChild(h);
+  });
+
+  var firstDow=new Date(data.year,data.month-1,1).getDay();
+  for(var e=0;e<firstDow;e++){var emp=document.createElement('div');emp.className='cal-day empty';grid.appendChild(emp)}
+
+  var today=data.today;
+  var weekLater=new Date();weekLater.setDate(weekLater.getDate()+7);
+  var weekLaterStr=fmtDate(weekLater);
+
+  data.days.forEach(function(day){
+    var el=document.createElement('div');
+    el.className='cal-day';
+
+    if(!day.isDelivery&&Number(day.trucks)<=0){
+      el.classList.add('no-delivery');
+    } else if(day.status){
+      el.classList.add('st-'+day.status);
+    }
+
+    if(day.date===today)el.classList.add('today');
+    if(day.date>=today&&day.date<=weekLaterStr&&day.isDelivery)el.classList.add('week-zone');
+    if(day.date===data.nearestOpen)el.classList.add('nearest-open');
+
+    var dateNum=parseInt(day.date.split('-')[2],10);
+    var html='<div class="day-num">'+dateNum+'</div>';
+
+    if(day.isDelivery&&day.status){
+      html+='<div class="cal-status status-badge status-'+day.status+'">'+day.status+'</div>';
+      if(Number(day.totalCount)>0||Number(day.totalAmount)>0){
+        html+='<div class="cal-info">'+day.totalCount+'件/'+fmtNum(day.totalAmount)+'千円</div>';
+      }
+      if(day.trucks)html+='<div class="cal-info" style="color:#888">'+day.trucks+'台</div>';
+    } else if(!day.isDelivery){
+      html+='<div class="cal-info" style="color:#bbb">休</div>';
+    }
+
+    if(day.isPromo)html+='<div class="cal-promo">販促</div>';
+    if(day.isHoliday)html+='<div class="cal-promo" style="color:#c62828">'+day.holidayName+'</div>';
+
+    el.innerHTML=html;
+    el.addEventListener('click',function(){if(day.isDelivery)showCalDayPopup(day)});
+    grid.appendChild(el);
+  });
+}
+
+function showCalDayPopup(day){
+  var ov=document.createElement('div');ov.className='dialog-overlay';
+  ov.addEventListener('click',function(e){if(e.target===ov)ov.remove()});
+  var statusBtns='';
+  ['受付中','注意','満車','締切済'].forEach(function(s){
+    statusBtns+='<button class="quick-btn'+(day.status===s?' active-range':'')+'" style="margin:2px" onclick="calChangeStatus(\''+day.date+'\',\''+s+'\')">'+s+'</button>';
+  });
+  ov.innerHTML='<div class="dialog" style="min-width:360px"><h3>'+day.date+'（'+day.dayName+'）</h3>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">'+
+    '<div><span style="color:#888;font-size:.8rem">台数</span><br><strong>'+day.trucks+'台</strong></div>'+
+    '<div><span style="color:#888;font-size:.8rem">ステータス</span><br><span class="status-badge status-'+day.status+'">'+day.status+'</span></div>'+
+    '<div><span style="color:#888;font-size:.8rem">合計件数</span><br><strong>'+fmtNum(day.totalCount)+'件</strong></div>'+
+    '<div><span style="color:#888;font-size:.8rem">合計金額</span><br><strong>'+fmtNum(day.totalAmount)+'千円</strong></div>'+
+    '<div><span style="color:#888;font-size:.8rem">1台あたり</span><br><strong style="color:#c62828">'+Number(day.perTruckCount).toFixed(1)+'件</strong></div>'+
+    '<div><span style="color:#888;font-size:.8rem">備考</span><br>'+(day.memo||'-')+'</div>'+
+    '</div>'+
+    '<div style="margin-top:12px"><span style="font-size:.85rem;font-weight:600">ステータス変更:</span><br>'+statusBtns+'</div>'+
+    '<div class="dialog-actions" style="margin-top:16px"><button class="cancel" onclick="this.closest(\'.dialog-overlay\').remove()">閉じる</button></div></div>';
+  document.body.appendChild(ov);
+}
+
+function calChangeStatus(date,status){
+  google.script.run.withSuccessHandler(function(){
+    document.querySelector('.dialog-overlay').remove();
+    loadCalendar();
+    showToast(date+' → '+status,'success');
+  }).withFailureHandler(function(e){showToast('変更エラー','error')}).saveCell(date,'status',status);
+}
 // ==================== 設定タブ ====================
 function loadDaySettings(){
   google.script.run.withSuccessHandler(function(d){renderDaySettings(d||[])}).getDaySettings();
@@ -772,6 +965,49 @@ function importHolidaysUI(){
   google.script.run.withSuccessHandler(function(r){showToast(r.count+'件インポート完了','success');loadHolidays();loadHolidayDateSet();document.getElementById('importArea').value=''}).importHolidays(rows);
 }
 
+// ==================== エリア管理 ====================
+function loadAreas(){
+  google.script.run.withSuccessHandler(function(d){renderAreas(d||[])}).getAreas();
+}
+function renderAreas(areas){
+  var tbody=document.getElementById('areaBody');tbody.innerHTML='';
+  if(!areas.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#999;padding:20px">エリア未登録</td></tr>';return}
+  areas.forEach(function(a){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+a.areaId+'</td><td>'+a.areaName+'</td><td>'+(a.deliveryDays||'')+'</td><td>'+(a.memo||'')+'</td><td><button class="delete-btn-small" onclick="deleteAreaUI(\''+a.areaId+'\')">削除</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+function saveAreaUI(){
+  var id=document.getElementById('areaId').value.trim();
+  var name=document.getElementById('areaName').value.trim();
+  if(!id||!name){showToast('IDとエリア名は必須','error');return}
+  google.script.run.withSuccessHandler(function(){showToast('エリア保存','success');loadAreas();document.getElementById('areaId').value='';document.getElementById('areaName').value='';document.getElementById('areaDeliveryDays').value='';document.getElementById('areaMemo').value=''})
+    .saveArea({areaId:id,areaName:name,deliveryDays:document.getElementById('areaDeliveryDays').value,memo:document.getElementById('areaMemo').value});
+}
+function deleteAreaUI(id){if(!confirm('エリア '+id+' を削除？'))return;google.script.run.withSuccessHandler(function(){showToast('削除','success');loadAreas()}).deleteArea(id)}
+
+function loadAreaExceptions(){
+  google.script.run.withSuccessHandler(function(d){renderAreaExceptions(d||[])}).getAreaExceptions();
+}
+function renderAreaExceptions(items){
+  var tbody=document.getElementById('areaExBody');tbody.innerHTML='';
+  if(!items.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#999;padding:20px">例外設定なし</td></tr>';return}
+  items.forEach(function(a){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+a.date+'</td><td>'+a.areaId+'</td><td>'+a.exceptionType+'</td><td>'+(a.reason||'')+'</td><td><button class="delete-btn-small" onclick="deleteAreaExUI(\''+a.date+'\',\''+a.areaId+'\')">削除</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+function saveAreaExUI(){
+  var date=document.getElementById('areaExDate').value;
+  var areaId=document.getElementById('areaExAreaId').value.trim();
+  if(!date||!areaId){showToast('日付とエリアIDは必須','error');return}
+  google.script.run.withSuccessHandler(function(){showToast('例外設定追加','success');loadAreaExceptions();document.getElementById('areaExDate').value='';document.getElementById('areaExAreaId').value='';document.getElementById('areaExReason').value=''})
+    .saveAreaException({date:date,areaId:areaId,exceptionType:document.getElementById('areaExType').value,reason:document.getElementById('areaExReason').value});
+}
+function deleteAreaExUI(date,areaId){if(!confirm(date+'/'+areaId+' を削除？'))return;google.script.run.withSuccessHandler(function(){showToast('削除','success');loadAreaExceptions()}).deleteAreaException(date,areaId)}
+
 // ==================== データ確認タブ ====================
 function loadExportData(){
   var s=document.getElementById('exportStartDate').value,e=document.getElementById('exportEndDate').value;if(!s||!e)return;
@@ -797,21 +1033,29 @@ function loadChangeLog(){
     logs.forEach(function(l){var tr=document.createElement('tr');tr.innerHTML='<td>'+l.timestamp+'</td><td>'+l.user+'</td><td>'+l.targetDate+'</td><td>'+l.field+'</td><td>'+l.oldValue+'</td><td>'+l.newValue+'</td>';tbody.appendChild(tr)});
   }).getChangeLog(100);
 }
-
 // ==================== 分析タブ ====================
 function runAnalysis(){
   var s=document.getElementById('analysisStartDate').value,e=document.getElementById('analysisEndDate').value;
   if(!s||!e){showToast('期間を指定','error');return}
   google.script.run.withSuccessHandler(function(result){
     if(!result.rows||!result.rows.length){showToast('分析データなし','info');return}
+    analysisRows=result.rows;
+    analysisContractLogs=result.contractLogs||[];
     renderAnalysis(result.rows);
   }).withFailureHandler(function(e){showToast('分析エラー','error')}).getAnalysisData(s,e);
 }
+
 function renderAnalysis(rows){
   document.getElementById('analysisSummarySection').style.display='block';
+  document.getElementById('heatmapSection').style.display='block';
   document.getElementById('comparisonSection').style.display='block';
+  document.getElementById('manshaSpeedSection').style.display='block';
+  document.getElementById('manshaWaveSection').style.display='block';
   document.getElementById('regressionSection').style.display='block';
   document.getElementById('regressionAmountSection').style.display='block';
+  document.getElementById('predictionSection').style.display='block';
+
+  // サマリー
   var n=rows.length,tc=0,ta=0,spc=0,spa=0;
   rows.forEach(function(r){tc+=r.totalCount;ta+=r.totalAmount;spc+=r.perTruckCount;spa+=r.perTruckAmount});
   document.getElementById('statCards').innerHTML=
@@ -820,6 +1064,11 @@ function renderAnalysis(rows){
     '<div class="stat-card"><div class="stat-label">総金額</div><div class="stat-value">'+fmtNum(ta)+'千円</div></div>'+
     '<div class="stat-card red"><div class="stat-label">平均1台あたり件数</div><div class="stat-value">'+(spc/n).toFixed(1)+'</div></div>'+
     '<div class="stat-card red"><div class="stat-label">平均1台あたり金額</div><div class="stat-value">'+fmtNum(Math.round(spa/n))+'千円</div></div>';
+
+  // ヒートマップ
+  renderHeatmap();
+
+  // 傾向比較
   var groups={};
   rows.forEach(function(r){var key=r.dayType;if(r.isPromo)key='販促期間';if(!groups[key])groups[key]={count:0,tc:0,ta:0,ptc:0,pta:0};var g=groups[key];g.count++;g.tc+=r.totalCount;g.ta+=r.totalAmount;g.ptc+=r.perTruckCount;g.pta+=r.perTruckAmount});
   var compBody=document.getElementById('comparisonBody');compBody.innerHTML='';var baseAvg=null;
@@ -830,8 +1079,158 @@ function renderAnalysis(rows){
     tr.innerHTML='<td style="text-align:left;font-weight:600">'+k+'</td><td>'+g.count+'</td><td>'+ac.toFixed(1)+'</td><td>'+fmtNum(Math.round(aa))+'</td><td style="font-weight:700;color:#c62828">'+ap.toFixed(1)+'</td><td style="font-weight:700;color:#c62828">'+fmtNum(Math.round(aap))+'</td><td>'+(baseAvg?((ac/baseAvg)*100).toFixed(0)+'%':'-')+'</td>';
     compBody.appendChild(tr);
   });
+
+  // 満車スピード分析
+  renderManshaSpeed(rows);
+  // 満車波及分析
+  renderManshaWave(rows);
+  // 回帰分析
   runRegressionBoth(rows);
 }
+
+// ヒートマップ
+function renderHeatmap(){
+  var rows=analysisRows;if(!rows||!rows.length)return;
+  var filter=document.getElementById('heatmapTrucksFilter').value;
+  var filtered=rows;
+  if(filter!=='all')filtered=rows.filter(function(r){return Number(r.trucks)===Number(filter)});
+
+  var dayNames=['月','火','水','木','金','土','日'];
+  var grid={};
+  dayNames.forEach(function(d){grid[d]={promo:{sum:0,n:0},normal:{sum:0,n:0}}});
+
+  filtered.forEach(function(r){
+    var dayIdx=new Date(r.date).getDay();
+    var dn=['日','月','火','水','木','金','土'][dayIdx];
+    var cat=r.isPromo?'promo':'normal';
+    if(grid[dn]){grid[dn][cat].sum+=r.perTruckCount;grid[dn][cat].n++}
+  });
+
+  var html='<table class="heatmap-table"><thead><tr><th>曜日</th><th>通常期</th><th>販促期間中</th></tr></thead><tbody>';
+  var allVals=[];
+  dayNames.forEach(function(d){
+    ['normal','promo'].forEach(function(c){
+      if(grid[d][c].n>=3)allVals.push(grid[d][c].sum/grid[d][c].n);
+    });
+  });
+  var minV=allVals.length?Math.min.apply(null,allVals):0;
+  var maxV=allVals.length?Math.max.apply(null,allVals):1;
+
+  dayNames.forEach(function(d){
+    html+='<tr><td style="font-weight:600">'+d+'</td>';
+    ['normal','promo'].forEach(function(c){
+      var g=grid[d][c];
+      if(g.n<3){
+        html+='<td class="heatmap-cell insufficient">データ不足(N='+g.n+')</td>';
+      } else {
+        var avg=g.sum/g.n;
+        var ratio=maxV>minV?(avg-minV)/(maxV-minV):0.5;
+        var r2=Math.round(255-(ratio*155)),g2=Math.round(255-(ratio*80)),b2=Math.round(255-(ratio*155));
+        html+='<td class="heatmap-cell" style="background:rgb('+r2+','+g2+','+b2+')">'+avg.toFixed(1)+' (N='+g.n+')</td>';
+      }
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('heatmapContainer').innerHTML=html;
+}
+
+// 満車スピード分析
+function renderManshaSpeed(rows){
+  var container=document.getElementById('manshaSpeedContainer');
+  // 契約履歴ログから累積パターンを作る
+  if(!analysisContractLogs||analysisContractLogs.length<3){
+    container.innerHTML='<div class="insight-box">データが蓄積されると表示されます（現在'+((analysisContractLogs||[]).length)+'件）</div>';
+    return;
+  }
+
+  // 配送日ごとのリードタイム別累積を集計
+  var deliveryGroups={};
+  analysisContractLogs.forEach(function(log){
+    if(!deliveryGroups[log.deliveryDate])deliveryGroups[log.deliveryDate]={logs:[],row:null};
+    deliveryGroups[log.deliveryDate].logs.push(log);
+  });
+  rows.forEach(function(r){if(deliveryGroups[r.date])deliveryGroups[r.date].row=r});
+
+  // 条件別の平均累積パターン
+  var patterns={all:{},weekday:{},weekend:{}};
+  for(var dd in deliveryGroups){
+    var grp=deliveryGroups[dd];if(!grp.row)continue;
+    var isWe=grp.row.weekendFlag;
+    grp.logs.sort(function(a,b){return b.leadTime-a.leadTime});
+    var cumCount=0;
+    grp.logs.forEach(function(log){
+      cumCount+=Number(log.count)||0;
+      var lt=Number(log.leadTime)||0;
+      if(!patterns.all[lt])patterns.all[lt]={sum:0,n:0};
+      patterns.all[lt].sum+=cumCount;patterns.all[lt].n++;
+      var cat=isWe?'weekend':'weekday';
+      if(!patterns[cat][lt])patterns[cat][lt]={sum:0,n:0};
+      patterns[cat][lt].sum+=cumCount;patterns[cat][lt].n++;
+    });
+  }
+
+  var html='<table class="comparison-table"><thead><tr><th>リードタイム(日前)</th><th>全体平均累積件数</th><th>平日</th><th>土日祝</th></tr></thead><tbody>';
+  var leadTimes=Object.keys(patterns.all).map(Number).sort(function(a,b){return b-a});
+  leadTimes.forEach(function(lt){
+    var allAvg=patterns.all[lt]?(patterns.all[lt].sum/patterns.all[lt].n).toFixed(1):'-';
+    var wdAvg=patterns.weekday[lt]?(patterns.weekday[lt].sum/patterns.weekday[lt].n).toFixed(1):'-';
+    var weAvg=patterns.weekend[lt]?(patterns.weekend[lt].sum/patterns.weekend[lt].n).toFixed(1):'-';
+    html+='<tr><td>'+lt+'日前</td><td>'+allAvg+'</td><td>'+wdAvg+'</td><td>'+weAvg+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  container.innerHTML=html;
+}
+
+// 満車波及分析
+function renderManshaWave(rows){
+  var container=document.getElementById('manshaWaveContainer');
+  // 7日間スライディングウィンドウで満車日数を集計し、翌7日間の平均件数との相関を見る
+  if(rows.length<14){
+    container.innerHTML='<div class="insight-box">データが蓄積されると表示されます（現在'+rows.length+'件）</div>';
+    return;
+  }
+
+  var points=[];
+  for(var i=0;i<=rows.length-14;i++){
+    var manshaCount=0;
+    for(var j=i;j<i+7;j++){if(rows[j].status==='満車')manshaCount++}
+    var nextAvg=0,nextN=0;
+    for(var k=i+7;k<i+14&&k<rows.length;k++){nextAvg+=rows[k].perTruckCount;nextN++}
+    if(nextN>0)points.push({manshaCount:manshaCount,avgCount:nextAvg/nextN});
+  }
+
+  if(points.length<3){
+    container.innerHTML='<div class="insight-box">データが蓄積されると表示されます（現在'+points.length+'データポイント）</div>';
+    return;
+  }
+
+  // グループ化して表示
+  var grouped={};
+  points.forEach(function(p){
+    if(!grouped[p.manshaCount])grouped[p.manshaCount]={sum:0,n:0};
+    grouped[p.manshaCount].sum+=p.avgCount;grouped[p.manshaCount].n++;
+  });
+
+  var html='<table class="comparison-table"><thead><tr><th>直近7日の満車日数</th><th>翌7日間の平均1台件数</th><th>データ数</th></tr></thead><tbody>';
+  var keys=Object.keys(grouped).map(Number).sort();
+  keys.forEach(function(k){
+    var g=grouped[k];
+    html+='<tr><td>'+k+'日</td><td style="font-weight:700">'+((g.sum/g.n).toFixed(1))+'</td><td>'+g.n+'</td></tr>';
+  });
+  html+='</tbody></table>';
+
+  // インサイト
+  if(keys.length>=2){
+    var low=grouped[keys[0]],high=grouped[keys[keys.length-1]];
+    var lowAvg=low.sum/low.n,highAvg=high.sum/high.n;
+    var diff=(highAvg-lowAvg).toFixed(1);
+    html+='<div class="insight-box">満車が'+keys[keys.length-1]+'日/週の時期は、'+keys[0]+'日/週の時期と比べて翌週の1台あたり件数が平均<strong>'+diff+'件'+(Number(diff)>0?'多い':'少ない')+'</strong>傾向にあります。</div>';
+  }
+  container.innerHTML=html;
+}
+
+// 回帰分析
 function runRegressionBoth(rows){
   var n=rows.length;if(n<5){document.getElementById('regressionResult').textContent='データ不足（5件以上必要）';return}
   var X=[],Yc=[],Ya=[];
@@ -874,18 +1273,65 @@ function invertMatrix(mat){
   var inv=[];for(var i=0;i<n;i++){inv[i]=[];for(var j=0;j<n;j++)inv[i][j]=aug[i][n+j]}
   return inv;
 }
-function runPrediction(){
-  if(!regressionModel){showToast('先に分析を実行','error');return}
-  var t=Number(document.getElementById('predTrucks').value)||3;
-  var dt=document.getElementById('predDayType').value;
-  var pr=Number(document.getElementById('predPromo').value);
-  var we=(dt==='土日')?1:0,ho=(dt==='祝日')?1:0;
-  var pc=regressionModel[0]+regressionModel[1]*t+regressionModel[2]*we+regressionModel[3]*ho+regressionModel[4]*pr;
-  var pa=regressionAmountModel?(regressionAmountModel[0]+regressionAmountModel[1]*t+regressionAmountModel[2]*we+regressionAmountModel[3]*ho+regressionAmountModel[4]*pr):0;
-  var el=document.getElementById('predictionResult');el.style.display='block';
-  el.innerHTML='<strong>予測</strong>（'+dt+(pr?' + 販促':'')+' / '+t+'台）<br>'+
-    '1台あたり: <strong style="color:#c62828;font-size:1.2rem">'+pc.toFixed(1)+'件</strong>　<strong style="color:#c62828;font-size:1.2rem">'+fmtNum(Math.round(pa))+'千円</strong><br>'+
-    '全体: 約 '+fmtNum(Math.round(pc*t))+'件 / '+fmtNum(Math.round(pa*t))+'千円';
+
+// ==================== 予測（新版） ====================
+function runPrediction2(){
+  var date=document.getElementById('predDate').value;
+  if(!date){showToast('配送日を指定','error');return}
+  google.script.run.withSuccessHandler(function(data){
+    renderPrediction2(data);
+  }).withFailureHandler(function(e){showToast('予測エラー','error')}).getPredictionData(date);
+}
+
+function renderPrediction2(data){
+  var el=document.getElementById('predictionResult2');el.style.display='block';
+  document.getElementById('predTrucks').value=data.trucks;
+
+  var promoSel=document.getElementById('predPromo').value;
+  if(promoSel==='auto'){
+    // 自動判定結果を反映
+  }
+
+  var similar=data.similarRows;
+  var n=similar.length;
+  var html='<div class="analysis-section" style="margin:0;box-shadow:none;padding:0">';
+
+  if(n===0){
+    html+='<div class="insight-box">同条件の過去データがありません。データが蓄積されると予測精度が向上します。</div>';
+  } else {
+    // 中央値・最小・最大
+    var counts=similar.map(function(r){return Number(r.totalCount)}).sort(function(a,b){return a-b});
+    var amounts=similar.map(function(r){return Number(r.totalAmount)}).sort(function(a,b){return a-b});
+    var median=counts[Math.floor(n/2)];
+    var minC=counts[0],maxC=counts[n-1];
+    var medianA=amounts[Math.floor(n/2)];
+
+    html+='<div class="prediction-result" style="margin-bottom:16px">'+
+      '<strong>予測</strong>（'+data.dayName+(data.isWeekend?'/土日':'/平日')+(data.isPromo?' + 販促':'')+' / '+data.trucks+'台）<br>'+
+      '予測件数レンジ: <strong style="color:#c62828;font-size:1.2rem">約'+minC+'〜'+maxC+'件</strong>（中央値: '+median+'件）<br>'+
+      '予測金額中央値: <strong style="color:#c62828;font-size:1.2rem">'+fmtNum(medianA)+'千円</strong><br>'+
+      '<span style="font-size:.85rem;color:#666">過去'+n+'件のデータより</span></div>';
+
+    // 過去の同条件実績一覧
+    html+='<h4 style="font-size:.9rem;margin-bottom:8px">過去の同条件実績（直近30件）</h4>';
+    html+='<div class="table-wrapper"><table class="comparison-table"><thead><tr><th>配送日</th><th>曜日</th><th>台数</th><th>販促</th><th>合計件数</th><th>合計金額</th><th>ステータス</th><th>満車確定日</th></tr></thead><tbody>';
+    similar.forEach(function(r){
+      html+='<tr><td>'+r.date+'</td><td>'+r.dayName+'</td><td>'+r.trucks+'</td><td>'+(r.isPromo?'あり':'-')+'</td><td style="font-weight:700">'+fmtNum(r.totalCount)+'</td><td>'+fmtNum(r.totalAmount)+'</td><td><span class="status-badge status-'+r.status+'">'+r.status+'</span></td><td>'+(r.manshaDate||'-')+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  // 満車タイミング目安
+  if(data.manshaLeadTimes&&data.manshaLeadTimes.length>0){
+    var lts=data.manshaLeadTimes.sort(function(a,b){return a-b});
+    var avgLt=lts.reduce(function(a,b){return a+b},0)/lts.length;
+    html+='<div class="insight-box" style="margin-top:12px">満車タイミングの目安: 同条件では平均で<strong>配送'+avgLt.toFixed(0)+'日前</strong>に満車になっています（'+lts.length+'件のデータ）。</div>';
+  } else {
+    html+='<div class="insight-box" style="margin-top:12px">満車タイミングデータはまだありません。ステータスが「満車」に変更されると自動記録されます。</div>';
+  }
+
+  html+='</div>';
+  el.innerHTML=html;
 }
 
 // ==================== トースト ====================
