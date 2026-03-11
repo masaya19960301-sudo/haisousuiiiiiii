@@ -253,16 +253,18 @@ function getNext30DeliveryDays() {
     if (trucks <= 0) continue; // 休業日スキップ
 
     if (existingMap[dateStr]) {
-      result.push(existingMap[dateStr]);
+      var row = existingMap[dateStr];
+      row.defaultTrucks = trucks;
+      result.push(row);
     } else {
-      // 新規行を作成してシートにも追加
       var dayName = DAY_NAMES[dayIndex];
       var newRow = [dateStr, dayName, trucks, '受付中', 0, 0, 0, 0, 0, 0, 0, 0, ''];
       sheet.appendRow(newRow);
       result.push({
         date: dateStr, dayName: dayName, trucks: trucks, status: '受付中',
         totalCount: 0, totalAmount: 0, perTruckCount: 0, perTruckAmount: 0,
-        yesterdayCount: 0, yesterdayAmount: 0, todayCount: 0, todayAmount: 0, memo: ''
+        yesterdayCount: 0, yesterdayAmount: 0, todayCount: 0, todayAmount: 0,
+        memo: '', defaultTrucks: trucks
       });
     }
     count++;
@@ -274,9 +276,12 @@ function getNext30DeliveryDays() {
 // ==================== データ取得 ====================
 
 function getRows(startDate, endDate) {
-  var sheet = getSpreadsheet().getSheetByName(SHEET_NAMES.MAIN);
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAMES.MAIN);
   if (!sheet || sheet.getLastRow() <= 1) return [];
 
+  var daySettings = getDaySettingsMap(ss);
+  var specialDaysMap = getSpecialDaysMap(ss);
   var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, MAIN_HEADERS.length).getValues();
   var result = [];
 
@@ -294,8 +299,12 @@ function getRows(startDate, endDate) {
     if (start && rowDate < start) continue;
     if (end && rowDate > end) continue;
 
+    var dateStr = formatDate(rowDate);
+    var dayIndex = rowDate.getDay();
+    var defTrucks = resolveTrucks(dateStr, dayIndex, daySettings, specialDaysMap);
+
     result.push({
-      date: formatDate(rowDate),
+      date: dateStr,
       dayName: row[1],
       trucks: row[2],
       status: row[3],
@@ -307,7 +316,8 @@ function getRows(startDate, endDate) {
       yesterdayAmount: row[9],
       todayCount: row[10],
       todayAmount: row[11],
-      memo: row[12] || ''
+      memo: row[12] || '',
+      defaultTrucks: defTrucks
     });
   }
 
@@ -371,11 +381,16 @@ function recalculateRow(sheet, rowIndex) {
 function getRowData(sheet, rowIndex) {
   var row = sheet.getRange(rowIndex, 1, 1, MAIN_HEADERS.length).getValues()[0];
   var dateVal = row[0] instanceof Date ? formatDate(row[0]) : String(row[0]);
+  var rowDate = row[0] instanceof Date ? row[0] : new Date(row[0]);
+  var ss = getSpreadsheet();
+  var daySettings = getDaySettingsMap(ss);
+  var specialDaysMap = getSpecialDaysMap(ss);
+  var defTrucks = resolveTrucks(dateVal, rowDate.getDay(), daySettings, specialDaysMap);
   return {
     date: dateVal, dayName: row[1], trucks: row[2], status: row[3],
     totalCount: row[4], totalAmount: row[5], perTruckCount: row[6], perTruckAmount: row[7],
     yesterdayCount: row[8], yesterdayAmount: row[9], todayCount: row[10], todayAmount: row[11],
-    memo: row[12] || ''
+    memo: row[12] || '', defaultTrucks: defTrucks
   };
 }
 
@@ -484,6 +499,23 @@ function saveDaySettings(settings) {
   if (rows.length > 0) {
     sheet.getRange(2, 1, rows.length, 3).setValues(rows);
   }
+  return { success: true };
+}
+
+// ==================== 目標設定 ====================
+
+function getTargets() {
+  var props = PropertiesService.getScriptProperties();
+  return {
+    targetCount: Number(props.getProperty('TARGET_PER_TRUCK_COUNT')) || 0,
+    targetAmount: Number(props.getProperty('TARGET_PER_TRUCK_AMOUNT')) || 0
+  };
+}
+
+function saveTargets(data) {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('TARGET_PER_TRUCK_COUNT', String(Number(data.targetCount) || 0));
+  props.setProperty('TARGET_PER_TRUCK_AMOUNT', String(Number(data.targetAmount) || 0));
   return { success: true };
 }
 
